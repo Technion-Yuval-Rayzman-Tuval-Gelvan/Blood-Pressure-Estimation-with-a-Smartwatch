@@ -17,7 +17,7 @@ from wfdb.io import download
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks, welch
 from scipy.stats import entropy
-import tqdm.notebook as tqdm
+import tqdm
 import time
 from scipy import signal
 from scipy.fft import fftshift
@@ -38,6 +38,7 @@ class Sample:
         self.bp_index = bp_index
         self.ppg_index = ppg_index
         self.squared_magnitude_ppg = None
+        self.window_number = None
 
 
 def load_records(records_path):
@@ -53,7 +54,7 @@ def load_records(records_path):
             with open(f'{posixpath.join(root, file)}', 'rb') as f:
                 record = pickle.load(f)
                 records.append(record)
-
+    print("loading records done")
     return records
 
 
@@ -80,8 +81,9 @@ def remove_unrelevant_records(records):
 def record_to_windows(record):
     start_point = 0
     fs = record.fs
-    samples_per_step = np.int(window_in_sec * fs)
-    end_point = start_point + samples_per_step
+    end_point = start_point + (window_in_sec * fs)
+    window_overlap = window_in_sec / 2
+    new_samples_per_step = np.int(window_overlap * fs)
     record_windows = []
 
     while end_point < record.sig_len:
@@ -89,8 +91,8 @@ def record_to_windows(record):
         window = copy.copy(record)
         window.p_signal = p_signal
         window.sig_len = end_point - start_point
-        start_point += samples_per_step
-        end_point += samples_per_step
+        start_point += new_samples_per_step
+        end_point += new_samples_per_step
         record_windows.append(window)
 
     return record_windows
@@ -196,13 +198,26 @@ def ppg_filter(samples):
 
 
 def samples_to_spectograms(samples):
-    for sample in samples:
+    window_number = 0
+    last_record_name = samples[0].window.record_name
+    print("saving images..")
+    for sample in tqdm.tqdm(samples):
         ppg_signal = sample.window.p_signal[:, sample.ppg_index]
         fs = sample.window.fs
         noverlap = 0.96 * stft_window_size
         plt.specgram(ppg_signal, Fs=fs, scale='dB', NFFT=stft_window_size, noverlap=noverlap)
         plt.axis(ymin=frequency_start, ymax=frequency_end)
-        plt.savefig(f"{sample.window.record_name}_{sample.systolic_bp}_{sample.diastolic_bp}.jpg")
+        dir_path = f"../../Data/{sample.window.record_name}"
+        if not os.path.isdir(dir_path):
+            os.makedirs(dir_path)
+        plt.savefig(f"../../Data/{sample.window.record_name}/"
+                    f"{sample.window.record_name}_{window_number}_{sample.systolic_bp}_{sample.diastolic_bp}.png")
+        sample.window_number = window_number
+        window_number += 1
+        if last_record_name != sample.window.record_name:
+            window_number = 0
+        last_record_name = sample.window.record_name
+    print("images saving done")
 
 
 def main():
@@ -217,7 +232,7 @@ def main():
     filtered_bp_samples = bp_filter(windows)
     # print_window(filtered_bp_samples[2].window)
     filtered_ppg_samples = ppg_filter(filtered_bp_samples)
-    print_window(filtered_ppg_samples[5].window)
+    # print_window(filtered_ppg_samples[5].window)
     spectograms = samples_to_spectograms(filtered_ppg_samples)
     print(
         f"Num Windows (30 sec): {len(windows)}, After bp filter: {len(filtered_bp_samples)}, After ppg filter: {len(filtered_ppg_samples)}")
