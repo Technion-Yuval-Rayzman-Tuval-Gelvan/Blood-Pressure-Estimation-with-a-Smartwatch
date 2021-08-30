@@ -21,10 +21,11 @@ import tqdm
 import time
 from scipy import signal
 from scipy.fft import fftshift
+from multiprocessing import Pool
 
 squered_magnitude_threshold = 200
 window_in_sec = 30
-frequency_end = 14
+frequency_end = 12
 frequency_start = 0
 stft_window_size = 750
 
@@ -197,27 +198,40 @@ def ppg_filter(samples):
     return filtered_samples
 
 
+def save_sample(sample):
+    ppg_signal = sample.window.p_signal[:, sample.ppg_index]
+    fs = sample.window.fs
+    noverlap = 0.96 * stft_window_size
+    plt.specgram(ppg_signal, Fs=fs, scale='dB', NFFT=stft_window_size, noverlap=noverlap)
+    plt.axis(ymin=frequency_start, ymax=frequency_end)
+    dir_path = f"../../Data/{sample.window.record_name}"
+    if not os.path.isdir(dir_path):
+        os.makedirs(dir_path)
+    plt.savefig(f"../../Data/{sample.window.record_name}/"
+                f"{sample.window.record_name}_{sample.window_number}_{sample.systolic_bp}_{sample.diastolic_bp}.png")
+    plt.close()
+
+
 def samples_to_spectograms(samples):
+    print("saving images..")
+    pool = Pool()
+    for _ in tqdm.tqdm(pool.imap(func=save_sample, iterable=samples), total=len(samples)):
+        pass
+
+    print("images saving done")
+
+
+def get_window_numbers(samples):
     window_number = 0
     last_record_name = samples[0].window.record_name
-    print("saving images..")
-    for sample in tqdm.tqdm(samples):
-        ppg_signal = sample.window.p_signal[:, sample.ppg_index]
-        fs = sample.window.fs
-        noverlap = 0.96 * stft_window_size
-        plt.specgram(ppg_signal, Fs=fs, scale='dB', NFFT=stft_window_size, noverlap=noverlap)
-        plt.axis(ymin=frequency_start, ymax=frequency_end)
-        dir_path = f"../../Data/{sample.window.record_name}"
-        if not os.path.isdir(dir_path):
-            os.makedirs(dir_path)
-        plt.savefig(f"../../Data/{sample.window.record_name}/"
-                    f"{sample.window.record_name}_{window_number}_{sample.systolic_bp}_{sample.diastolic_bp}.png")
+    for sample in samples:
         sample.window_number = window_number
         window_number += 1
         if last_record_name != sample.window.record_name:
             window_number = 0
         last_record_name = sample.window.record_name
-    print("images saving done")
+
+    return samples
 
 
 def main():
@@ -233,7 +247,8 @@ def main():
     # print_window(filtered_bp_samples[2].window)
     filtered_ppg_samples = ppg_filter(filtered_bp_samples)
     # print_window(filtered_ppg_samples[5].window)
-    spectograms = samples_to_spectograms(filtered_ppg_samples)
+    samples = get_window_numbers(filtered_ppg_samples)
+    samples_to_spectograms(samples)
     print(
         f"Num Windows (30 sec): {len(windows)}, After bp filter: {len(filtered_bp_samples)}, After ppg filter: {len(filtered_ppg_samples)}")
 
