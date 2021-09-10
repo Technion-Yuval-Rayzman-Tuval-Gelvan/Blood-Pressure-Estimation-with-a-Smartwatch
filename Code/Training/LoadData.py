@@ -16,7 +16,7 @@ from torchvision import datasets, models, transforms
 class Data:
 
     def __init__(self, images_train, images_val, images_test, dias_bp_list_train, dias_bp_list_val,
-               dias_bp_list_test,sys_bp_list_train, sys_bp_list_val, sys_bp_list_test):
+                 dias_bp_list_test, sys_bp_list_train, sys_bp_list_val, sys_bp_list_test):
         self.images_train = images_train
         self.images_val = images_val
         self.images_test = images_test
@@ -40,29 +40,25 @@ def load_data(data_path):
         for image_name in images:
             image = cv2.imread(posixpath.join(root, image_name))
             image = cv2.resize(image, (110, 110))
-            # normalized_image = (image - np.mean(image)) / np.std(image)
-            # normalized_image = torch.tensor(normalized_image.T).view(1, 4, 640, 480)
-            # normalized_image = normalized_image.to(device=device, dtype=torch.float)
-            # normalized_image = Variable(normalized_image.cuda(device))
+
             name = image_name.split('_')
+
             # name example: 3000063_0025_1_124.32324334151441_60.60244138052165
-            systolic_bp = name[3]
-            diastolic_bp = name[4]
-            # data.add_image(image, image_name, systolic_bp, diastolic_bp)
+            systolic_bp = np.float(name[3])
+            diastolic_bp = np.float(name[4][:-4])
+
             images_list.append(image)
             sys_bp_list.append(systolic_bp)
             dias_bp_list.append(diastolic_bp)
 
     print("loading images done")
-    images_list = np.asarray(images_list)
-    sys_bp_list = np.asarray(sys_bp_list)
-    dias_bp_list = np.asarray(dias_bp_list)
+    images_list = np.array(images_list)
+    sys_bp_list = np.array(sys_bp_list)
+    dias_bp_list = np.array(dias_bp_list)
     return images_list, sys_bp_list, dias_bp_list
 
 
 def split_data(images_list, sys_bp_list, dias_bp_list):
-
-
     n_samples = images_list.shape[0]  # The total number of samples in the dataset
 
     # Generate a random generator with a fixed seed
@@ -91,8 +87,8 @@ def split_data(images_list, sys_bp_list, dias_bp_list):
     dias_bp_list_test = dias_bp_list[test_indices]
     sys_bp_list_test = sys_bp_list[test_indices]
 
-    data = Data(images_train, images_val, images_test, dias_bp_list_train,dias_bp_list_val,
-               dias_bp_list_test,sys_bp_list_train, sys_bp_list_val, sys_bp_list_test)
+    data = Data(images_train, images_val, images_test, dias_bp_list_train, dias_bp_list_val,
+                dias_bp_list_test, sys_bp_list_train, sys_bp_list_val, sys_bp_list_test)
     return data
 
 
@@ -107,24 +103,16 @@ def print_some_images(images):
         ax.set_xticks([])
     plt.show()
 
-def get_device():
-    # load torch
-    print("torch version:", torch.__version__)
-    if torch.cuda.is_available():
-        print("cuda version:", torch.version.cuda)
-        device = torch.device('cuda:0')
-        torch.cuda.empty_cache()
-        print("run on GPU.")
-    else:
-        device = torch.device('cpu')
-        print("no cuda GPU available")
-        print("run on CPU")
-    return device
+
+def get_data(data_path):
+    images_list, sys_bp_list, dias_bp_list = load_data(data_path)
+    data = split_data(images_list, sys_bp_list, dias_bp_list)
+
+    return data
 
 
 def main():
     data_path = '../../Data'
-    # device = get_device()
     images_list, sys_bp_list, dias_bp_list = load_data(data_path)
     data = split_data(images_list, sys_bp_list, dias_bp_list)
     print_some_images(data.images_train)

@@ -235,8 +235,8 @@ def get_window_numbers(samples):
 
 
 def main():
-    # records_path = '../../../mimic3wdb'
-    records_path = '../../../Test_data'
+    records_path = '../../../mimic3wdb'
+    # records_path = '../../../Test_data'
     records = load_records(records_path)
     # print_records(records)
     filtered_records = remove_unrelevant_records(records)
