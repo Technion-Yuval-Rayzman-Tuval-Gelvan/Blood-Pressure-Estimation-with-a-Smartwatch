@@ -7,7 +7,7 @@ import torchvision
 from torchvision import datasets, models, transforms
 
 
-def create_resnet_model(x):
+def create_resnet_model():
     model = models.resnet18(pretrained=False)
     out_channels = model.conv1.out_channels
     kernel_size = model.conv1.kernel_size
