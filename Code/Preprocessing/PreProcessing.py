@@ -21,13 +21,16 @@ import tqdm
 import time
 from scipy import signal
 from scipy.fft import fftshift
-from multiprocessing import Pool
+from multiprocessing import Pool, Lock
 
 squered_magnitude_threshold = 200
 window_in_sec = 30
 frequency_end = 12
 frequency_start = 0
 stft_window_size = 750
+
+# semaphore
+lock = Lock()
 
 
 class Sample:
@@ -44,10 +47,13 @@ class Sample:
 
 def load_records(records_path):
     records = []
+    total_windows = total_bp_filtered = total_ppg_filtered = 0
     # traverse root directory, and list directories as dirs and files as files
     print("loading records...")
-    for root, dirs, files in tqdm.tqdm(os.walk(records_path)):
+    for root, dirs, files in os.walk(records_path):
+        records = []
         path = root.split(os.sep)
+        print(f"loading {os.path.basename(root)}")
         # print(root)
         # print((len(path) - 1) * '---', os.path.basename(root))
         for file in files:
@@ -55,8 +61,15 @@ def load_records(records_path):
             with open(f'{posixpath.join(root, file)}', 'rb') as f:
                 record = pickle.load(f)
                 records.append(record)
+
+        num_windows, num_filtered_bp_samples, num_filtered_ppg_samples = filter_and_save_data(records)
+        total_windows += num_windows
+        total_bp_filtered += num_filtered_bp_samples
+        total_ppg_filtered += num_filtered_ppg_samples
+        print(
+            f"Num Windows (30 sec): {total_windows}, After bp filter: {total_bp_filtered}, After ppg filter: {total_ppg_filtered}")
+
     print("loading records done")
-    return records
 
 
 def print_records(records):
@@ -105,7 +118,9 @@ def records_to_windows(records):
         record_windows = record_to_windows(record)
         windows.append(record_windows)
 
-    windows = np.concatenate(windows)
+    if len(windows) != 0:
+        windows = np.concatenate(windows)
+
     return windows
 
 
@@ -150,16 +165,17 @@ def sample_bp_valid(sample):
 
 def bp_filter(windows):
     samples = []
-    bp_index = windows[0].sig_name.index('ABP')
-    ppg_index = windows[0].sig_name.index('PLETH')
-    for window in windows:
-        if window_valid(window, bp_index, ppg_index):
-            bp_signal = window.p_signal[:, bp_index]
-            bp_signal = np.array(bp_signal)
-            systolic_bp, diastolic_bp = bp_detection(bp_signal)
-            sample = Sample(window, systolic_bp, diastolic_bp, bp_index, ppg_index)
-            if sample_bp_valid(sample):
-                samples.append(sample)
+    if len(windows) != 0:
+        bp_index = windows[0].sig_name.index('ABP')
+        ppg_index = windows[0].sig_name.index('PLETH')
+        for window in windows:
+            if window_valid(window, bp_index, ppg_index):
+                bp_signal = window.p_signal[:, bp_index]
+                bp_signal = np.array(bp_signal)
+                systolic_bp, diastolic_bp = bp_detection(bp_signal)
+                sample = Sample(window, systolic_bp, diastolic_bp, bp_index, ppg_index)
+                if sample_bp_valid(sample):
+                    samples.append(sample)
 
     return samples
 
@@ -205,10 +221,14 @@ def save_sample(sample):
     plt.specgram(ppg_signal, Fs=fs, scale='dB', NFFT=stft_window_size, noverlap=noverlap)
     plt.axis(ymin=frequency_start, ymax=frequency_end)
     dir_path = f"../../Data/{sample.window.record_name}"
-    if not os.path.isdir(dir_path):
+    lock.acquire()
+    if not os.path.exists(dir_path):
         os.makedirs(dir_path)
-    plt.savefig(f"../../Data/{sample.window.record_name}/"
-                f"{sample.window.record_name}_{sample.window_number}_{sample.systolic_bp}_{sample.diastolic_bp}.png")
+    lock.release()
+    if not os.path.exists(f"../../Data/{sample.window.record_name}/"
+                          f"{sample.window.record_name}_{sample.window_number}_{sample.systolic_bp}_{sample.diastolic_bp}.png"):
+        plt.savefig(f"../../Data/{sample.window.record_name}/"
+                    f"{sample.window.record_name}_{sample.window_number}_{sample.systolic_bp}_{sample.diastolic_bp}.png")
     plt.close()
 
 
@@ -223,21 +243,19 @@ def samples_to_spectograms(samples):
 
 def get_window_numbers(samples):
     window_number = 0
-    last_record_name = samples[0].window.record_name
-    for sample in samples:
-        sample.window_number = window_number
-        window_number += 1
-        if last_record_name != sample.window.record_name:
-            window_number = 0
-        last_record_name = sample.window.record_name
+    if len(samples) != 0:
+        last_record_name = samples[0].window.record_name
+        for sample in samples:
+            sample.window_number = window_number
+            window_number += 1
+            if last_record_name != sample.window.record_name:
+                window_number = 0
+            last_record_name = sample.window.record_name
 
     return samples
 
 
-def main():
-    records_path = '../../../mimic3wdb'
-    # records_path = '../../../Test_data'
-    records = load_records(records_path)
+def filter_and_save_data(records):
     # print_records(records)
     filtered_records = remove_unrelevant_records(records)
     # print_records(filtered_records)
@@ -249,8 +267,14 @@ def main():
     # print_window(filtered_ppg_samples[5].window)
     samples = get_window_numbers(filtered_ppg_samples)
     samples_to_spectograms(samples)
-    print(
-        f"Num Windows (30 sec): {len(windows)}, After bp filter: {len(filtered_bp_samples)}, After ppg filter: {len(filtered_ppg_samples)}")
+
+    return len(windows), len(filtered_bp_samples), len(filtered_ppg_samples)
+
+
+def main():
+    records_path = '../../../mimic3wdb'
+    # records_path = '../../../Test_data'
+    load_records(records_path)
 
 
 if __name__ == "__main__":
