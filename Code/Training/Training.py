@@ -177,7 +177,11 @@ def train_and_save_model(model, data, train_loader, model_name):
     trained_model, train_objective_list, val_objective_list = train_resnet_model(model, best_learning_rate,
                                                                                  train_loader, data.images_val,
                                                                                  y_val, n_epochs)
-    torch.save(trained_model, f'../Models/{model_name}')
+    # torch.save(trained_model, f'../Models/{model_name}')
+    if model_name ==   'dias_model':
+        torch.save(trained_model, 'dias_model')
+    else:
+        torch.save(trained_model, 'sys_model')
 
 
 def main():
@@ -218,11 +222,11 @@ def main():
     # model_name = dias_model
 
     """Load Model"""
-    dias_model = torch.load(f'../Models/dias_model')
+    dias_model = torch.load('dias_model')
     dias_model.eval()
     calculate_test_score(dias_model, data.images_test, data.dias_bp_test, 'dias_model')
 
-    sys_model = torch.load(f'../Models/sys_model')
+    sys_model = torch.load('sys_model')
     sys_model.eval()
     calculate_test_score(sys_model, data.images_test, data.sys_bp_test, 'sys_model')
 

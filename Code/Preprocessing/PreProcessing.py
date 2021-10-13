@@ -42,7 +42,6 @@ class Sample:
         self.bp_index = bp_index
         self.ppg_index = ppg_index
         self.squared_magnitude_ppg = None
-        self.window_number = None
 
 
 def load_records(records_path):
@@ -220,15 +219,16 @@ def save_sample(sample):
     noverlap = 0.96 * stft_window_size
     plt.specgram(ppg_signal, Fs=fs, scale='dB', NFFT=stft_window_size, noverlap=noverlap)
     plt.axis(ymin=frequency_start, ymax=frequency_end)
-    dir_path = f"../../Data/{sample.window.record_name}"
+    record_name = sample.window.record_name.split('_')[0]
+    dir_path = f"../../Data/{record_name}"
     lock.acquire()
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
     lock.release()
-    if not os.path.exists(f"../../Data/{sample.window.record_name}/"
-                          f"{sample.window.record_name}_{sample.window_number}_{sample.systolic_bp}_{sample.diastolic_bp}.png"):
-        plt.savefig(f"../../Data/{sample.window.record_name}/"
-                    f"{sample.window.record_name}_{sample.window_number}_{sample.systolic_bp}_{sample.diastolic_bp}.png")
+    if not os.path.exists(f"../../Data/{record_name}/"
+                          f"{record_name}_{sample.systolic_bp}_{sample.diastolic_bp}.png"):
+        plt.savefig(f"../../Data/{record_name}/"
+                    f"{record_name}_{sample.systolic_bp}_{sample.diastolic_bp}.png")
     plt.close()
 
 
@@ -265,8 +265,8 @@ def filter_and_save_data(records):
     # print_window(filtered_bp_samples[2].window)
     filtered_ppg_samples = ppg_filter(filtered_bp_samples)
     # print_window(filtered_ppg_samples[5].window)
-    samples = get_window_numbers(filtered_ppg_samples)
-    samples_to_spectograms(samples)
+    # samples = get_window_numbers(filtered_ppg_samples)
+    samples_to_spectograms(filtered_ppg_samples)
 
     return len(windows), len(filtered_bp_samples), len(filtered_ppg_samples)
 

@@ -28,55 +28,79 @@ class Data:
         self.sys_bp_test = sys_bp_list_test
 
 
+class Patient:
+
+    def __init__(self, patient_name):
+        self.patient_name = patient_name
+        self.images = []
+        self.dias_bp = []
+        self.sys_bp = []
+
+    def add_data(self, image, dias_bp, sys_bp):
+        self.images.append(image)
+        self.dias_bp.append(dias_bp)
+        self.sys_bp.append(sys_bp)
+
+    def get_data(self):
+        return self.images, self.dias_bp, self.sys_bp
+
+
 def load_data(data_path):
     # traverse root directory, and list directories as dirs and files as files
     print("loading images...")
-    # data = Data()
-    images_list = []
-    sys_bp_list = []
-    dias_bp_list = []
+    first_time = True
+    patients = []
     for root, dirs, images in tqdm.tqdm(os.walk(data_path)):
         path = root.split(os.sep)
-        for image_name in images:
-            image = cv2.imread(posixpath.join(root, image_name))
-            image = cv2.resize(image, (110, 110))
+        if len(images) != 0:
+            patient_name = images[0].split('_')[0]
+            new_patient = Patient(patient_name)
+            print(patient_name)
+            for image_name in tqdm.tqdm(images):
 
-            name = image_name.split('_')
+                image = cv2.imread(posixpath.join(root, image_name))
+                image = cv2.resize(image, (110, 110))
 
-            # name example: 3000063_0025_1_124.32324334151441_60.60244138052165
-            systolic_bp = np.float(name[3])
-            diastolic_bp = np.float(name[4][:-4])
+                # name example: 3000063_124.32324334151441_60.60244138052165
+                name = image_name.split('_')
+                systolic_bp = np.float(name[1])
+                diastolic_bp = np.float(name[2][:-4])
 
-            images_list.append(image)
-            sys_bp_list.append(systolic_bp)
-            dias_bp_list.append(diastolic_bp)
+                new_patient.add_data(image, diastolic_bp, systolic_bp)
 
+    patients.append(new_patient)
+    patients = np.array(patients)
     print("loading images done")
-    images_list = np.array(images_list)
-    sys_bp_list = np.array(sys_bp_list)
-    dias_bp_list = np.array(dias_bp_list)
-    return images_list, sys_bp_list, dias_bp_list
+
+    return patients
 
 
-def split_data(images_list, sys_bp_list, dias_bp_list):
-    n_samples = images_list.shape[0]  # The total number of samples in the dataset
+def split_data(patients_data):
+
+    n_patients = len(patients_data)
 
     # Generate a random generator with a fixed seed
     rand_gen = np.random.RandomState(0)
 
     # Generating a shuffled vector of indices
-    indices = np.arange(n_samples)
+    indices = np.arange(n_patients)
     rand_gen.shuffle(indices)
 
     # Split the indices into 60% train / 20% validation / 20% test
-    n_samples_train = int(n_samples * 0.6)
-    n_samples_val = n_samples_train + int(n_samples * 0.2)
-    train_indices = indices[:n_samples_train]
-    val_indices = indices[n_samples_train:n_samples_val]
-    test_indices = indices[n_samples_val:]
+    n_patients_train = int(n_patients * 0.6)
+    n_patients_val = n_patients_train + int(n_patients * 0.2)
+    train_indices = indices[:n_patients_train]
+    val_indices = indices[n_patients_train:n_patients_val]
+    test_indices = indices[n_patients_val:]
+
+    train_patients = patients_data[train_indices]
+    val_patients = patients_data[val_indices]
+    test_patients = patients_data[test_indices]
+    print(train_indices, val_indices, test_indices)
+
+
 
     # Extract the sub datasets from the full dataset using the calculated indices
-
     images_train = images_list[train_indices]
     dias_bp_list_train = dias_bp_list[train_indices]
     sys_bp_list_train = sys_bp_list[train_indices]
@@ -105,17 +129,17 @@ def print_some_images(images):
 
 
 def get_data(data_path):
-    images_list, sys_bp_list, dias_bp_list = load_data(data_path)
-    data = split_data(images_list, sys_bp_list, dias_bp_list)
+    patients_data = load_data(data_path)
+    data = split_data(patients_data)
 
     return data
 
 
 def main():
-    data_path = '../../Data'
-    images_list, sys_bp_list, dias_bp_list = load_data(data_path)
-    data = split_data(images_list, sys_bp_list, dias_bp_list)
-    print_some_images(data.images_train)
+    data_path = '../../Test_Data'
+    patients_data = load_data(data_path)
+    # data = split_data(patients_data)
+    # print_some_images(data.images_train)
 
 
 if __name__ == "__main__":
