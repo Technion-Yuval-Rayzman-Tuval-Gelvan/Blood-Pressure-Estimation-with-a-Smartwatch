@@ -60,7 +60,7 @@ def train(model, learning_rate, n_epochs, train_loader, x_val, y_val):
     return train_objective_list, val_objective_list
 
 
-def fine_tuning(model, train_loader, x_val, y_val):
+def fine_tuning(model, train_loader, x_val, y_val, model_name):
     n_epochs = 200
     etas_list = [3e-3, 1e-3, 3e-2, 1e-2]
 
@@ -84,7 +84,7 @@ def fine_tuning(model, train_loader, x_val, y_val):
     # dd/mm/YY H:M:S
     now = datetime.now()
     dt_string = now.strftime("%d/%m/%Y_%H:%M:%S")
-    plt.savefig(f'../../Results/fine_tuning_{now}.png')
+    plt.savefig(f'../../Results/fine_tuning_{now}_{model_name}.png')
 
 
 def train_resnet_model(model, learning_rate, train_loader, x_val, y_val, n_epochs):
@@ -159,6 +159,14 @@ def load_data_set(path):
     return data_set
 
 
+def save_model(model_name, trained_model):
+    # torch.save(trained_model, f'../Models/{model_name}')
+    if model_name == 'dias_model':
+        torch.save(trained_model, 'dias_model')
+    else:
+        torch.save(trained_model, 'sys_model')
+
+
 def train_and_save_model(model, data, train_loader, model_name):
     best_learning_rate = 0.001
     n_epochs = 1000
@@ -177,46 +185,58 @@ def train_and_save_model(model, data, train_loader, model_name):
     trained_model, train_objective_list, val_objective_list = train_resnet_model(model, best_learning_rate,
                                                                                  train_loader, data.images_val,
                                                                                  y_val, n_epochs)
-    # torch.save(trained_model, f'../Models/{model_name}')
-    if model_name ==   'dias_model':
-        torch.save(trained_model, 'dias_model')
-    else:
-        torch.save(trained_model, 'sys_model')
+    save_model(model_name, trained_model)
 
 
 def main():
     """Paths"""
-    data_path = '../../Test_Data'
-    # data_path = '../../Data'
+    # data_path = '../../Test_Data'
+    data_path = '../../Data'
     save_path = '../../Dataset'
-    data_set_name = 'test_data_set'
-    # data_set_name = 'data_set'
+    # data_set_name = 'test_data_set'
+    data_set_name = 'data_set'
     path = f'{save_path}/{data_set_name}'
-
-    """Save Data"""
-    # data = LoadData.get_data(data_path)
-    # save_data(data, path)
-
-    """Load Data"""
-    data = load_data_set(path)
-    dias_train_loader, _ = prepare_data(data.images_train, data.dias_bp_train)
-    sys_train_loader, _ = prepare_data(data.images_train, data.sys_bp_train)
-
-    """check train model"""
-    # model = ResNet.create_resnet_model()
-    # n_epochs = 20
-    # learning_rate = 0.01
-    # dias_model, _, _ = train_resnet_model(model, learning_rate, train_loader, data.images_val, data.dias_bp_val, n_epochs)
-    # sys_model, _, _= train_resnet_model(model, learning_rate, train_loader, data.images_val, data.sys_bp_val, n_epochs)
-
-    """look for best learning rate"""
-    # model = ResNet.create_resnet_model()
-    # fine_tuning(model, train_loader, data.images_val, data.dias_bp_val)
+    chunks_list = LoadData.get_data_chunks(data_path)
 
     model = ResNet.create_resnet_model()
-    train_and_save_model(model, data, dias_train_loader, 'dias_model')
-    model = ResNet.create_resnet_model()
-    train_and_save_model(model, data, sys_train_loader, 'sys_model')
+
+    save_model('dias_model', model)
+    save_model('sys_model', model)
+
+    for i, chunk in enumerate(chunks_list):
+        print(f"****** Start Train Chunk {i} ******")
+
+        """Save Data"""
+        print("****** Get Chunk Data ******")
+        data = LoadData.get_data(data_path, chunk)
+        # save_data(data, path)
+
+        """Load Data"""
+        # data = load_data_set(path)
+        dias_train_loader, _ = prepare_data(data.images_train, data.dias_bp_train)
+        sys_train_loader, _ = prepare_data(data.images_train, data.sys_bp_train)
+
+        """check train model"""
+        # model = ResNet.create_resnet_model()
+        # n_epochs = 20
+        # learning_rate = 0.01
+        # dias_model, _, _ = train_resnet_model(model, learning_rate, train_loader, data.images_val, data.dias_bp_val, n_epochs)
+        # sys_model, _, _= train_resnet_model(model, learning_rate, train_loader, data.images_val, data.sys_bp_val, n_epochs)
+
+        if i == 0:
+            print("****** Fine Tuning ******")
+            """look for best learning rate"""
+            model = ResNet.create_resnet_model()
+            fine_tuning(model, dias_train_loader, data.images_val, data.dias_bp_val, 'dias_model')
+            fine_tuning(model, sys_train_loader, data.images_val, data.sys_bp_val, 'sys_model')
+
+        print("****** Train Dias Model ******")
+        dias_model = torch.load('dias_model')
+        train_and_save_model(dias_model, data, dias_train_loader, 'dias_model')
+
+        print("****** Train Sys Model ******")
+        sys_model = torch.load('sys_model')
+        train_and_save_model(sys_model, data, sys_train_loader, 'sys_model')
 
     # model = ResNet.create_resnet_model()
     # model_name = dias_model
