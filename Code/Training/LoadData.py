@@ -45,7 +45,7 @@ class Patient:
         self.sys_bp.append(sys_bp)
         self.names.append(name)
 
-    def get_data(self):
+    def get_patient_data(self):
         return self.images, self.dias_bp, self.sys_bp
 
 
@@ -57,15 +57,20 @@ def read_patient_data(image_name):
     patient_name = image_name.split('_')[0]
     # root = '../../Test_Data/'
     root = '../../Data/'
-    image = cv2.imread(posixpath.join(root, patient_name, image_name))
-    image = cv2.resize(image, (110, 110))
+    path = posixpath.join(root, patient_name, image_name)
+    data = (None, None, None, None)
+    if os.path.exists(path):
+        image = cv2.imread(posixpath.join(root, patient_name, image_name))
 
-    # name example: 3000063_124.32324334151441_60.60244138052165
-    name = image_name.split('_')
-    systolic_bp = np.float(name[1])
-    diastolic_bp = np.float(name[2][:-4])
+        if len(image):
+            norm_image = cv2.resize(image, (110, 110))
 
-    data = (image, diastolic_bp, systolic_bp, image_name)
+            # name example: 3000063_124.32324334151441_60.60244138052165
+            name = image_name.split('_')
+            systolic_bp = np.float(name[1])
+            diastolic_bp = np.float(name[2][:-4])
+
+            data = (norm_image, diastolic_bp, systolic_bp, image_name)
 
     return data
 
@@ -73,19 +78,20 @@ def read_patient_data(image_name):
 def load_data(data_path, list_dir):
     # traverse root directory, and list directories as dirs and files as files
     print("loading images...")
-    first_time = True
+    total_patients_chunk = len(list_dir)
     patients = []
-    for patient in list_dir:
+    for i, patient in enumerate(list_dir):
         images = os.listdir(f"{data_path}/{patient}")
-        if len(images) != 0:
+        if images:
             patient_name = images[0].split('_')[0]
             new_patient = Patient(patient_name)
-            print(f"loading patient {patient_name} data.")
+            print(f"loading patient {patient_name} data.\npatient {i+1} out of {total_patients_chunk}.")
             pool = Pool()
-            for image, diastolic_bp, systolic_bp, name in tqdm.tqdm(pool.imap(func=read_patient_data, iterable=images), total=len(images)):
-                new_patient.add_data(image, diastolic_bp, systolic_bp, name)
-                patients.append(new_patient)
+            for image, diastolic_bp, systolic_bp, name in pool.imap(func=read_patient_data, iterable=images):
+                if name:
+                    new_patient.add_data(image, diastolic_bp, systolic_bp, name)
 
+            patients.append(new_patient)
             pool.close()
             patients.append(new_patient)
 
@@ -116,7 +122,6 @@ def split_data(patients_data):
     train_patients = patients_data[train_indices]
     val_patients = patients_data[val_indices]
     test_patients = patients_data[test_indices]
-    print(train_indices, val_indices, test_indices)
 
     images_train = []
     dias_bp_list_train = []
@@ -129,24 +134,24 @@ def split_data(patients_data):
     sys_bp_list_test = []
 
     for patient in train_patients:
-        images, dias_bp, sys_bp = patient.get_data()
+        images, dias_bp, sys_bp = patient.get_patient_data()
         images_train.append(images)
         dias_bp_list_train.append(dias_bp)
         sys_bp_list_train.append(sys_bp)
 
     for patient in val_patients:
-        images, dias_bp, sys_bp = patient.get_data()
+        images, dias_bp, sys_bp = patient.get_patient_data()
         images_val.append(images)
         dias_bp_list_val.append(dias_bp)
         sys_bp_list_val.append(sys_bp)
 
     for patient in test_patients:
-        images, dias_bp, sys_bp = patient.get_data()
+        images, dias_bp, sys_bp = patient.get_patient_data()
         images_test.append(images)
         dias_bp_list_test.append(dias_bp)
         sys_bp_list_test.append(sys_bp)
 
-
+    print("split data done")
     # Extract the sub datasets from the full dataset using the calculated indices
     images_train = np.concatenate(images_train)
     dias_bp_list_train = np.concatenate(dias_bp_list_train)
@@ -194,7 +199,7 @@ def get_data_chunks(data_path):
     indices = np.arange(n_patients)
     rand_gen.shuffle(indices)
 
-    n_patients_per_chunk = int(n_patients / 10)
+    n_patients_per_chunk = int(n_patients / 250)
     start = 0
     end = n_patients_per_chunk
     chunks_list = []
@@ -213,8 +218,9 @@ def main():
     # data_path = '../../Test_Data'
     data_path = '../../Data'
     chunks_list = get_data_chunks(data_path)
-    print (chunks_list)
-    # dir_list = get_dir_list(data_path)
+    # print (chunks_list)
+    # dir_list = get_dir_list('../../Data/3042410')
+    # print(dir_list)
     # patients_data = load_data(data_path, dir_list)
     # data = split_data(patients_data)
     # print_some_images(data.images_train)
