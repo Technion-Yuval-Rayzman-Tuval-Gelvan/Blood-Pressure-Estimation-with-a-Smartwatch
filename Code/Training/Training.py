@@ -1,6 +1,5 @@
 import copy
 import pickle
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -87,7 +86,7 @@ def fine_tuning(model, train_loader, x_val, y_val, model_name):
     plt.savefig(f'../../Results/fine_tuning_{now}_{model_name}.png')
 
 
-def train_resnet_model(model, learning_rate, train_loader, x_val, y_val, n_epochs):
+def train_resnet_model(model, learning_rate, train_loader, x_val, y_val, n_epochs, model_name):
     train_objective_list, val_objective_list = train(model, learning_rate, n_epochs, train_loader,
                                                      torch.tensor(x_val).float(),
                                                      torch.tensor(y_val).float())
@@ -103,7 +102,7 @@ def train_resnet_model(model, learning_rate, train_loader, x_val, y_val, n_epoch
     # dd/mm/YY H:M:S
     now = datetime.now()
     dt_string = now.strftime("%d/%m/%Y_%H:%M:%S")
-    plt.savefig(f'../../Results/training_{now}.png')
+    plt.savefig(f'../../Results/{model_name}/training_{now}.png')
 
     return model, train_objective_list, val_objective_list
 
@@ -160,30 +159,27 @@ def load_data_set(path):
 
 
 def save_model(model_name, trained_model):
-    # torch.save(trained_model, f'../Models/{model_name}')
-    if model_name == 'dias_model':
-        torch.save(trained_model, 'dias_model')
-    else:
-        torch.save(trained_model, 'sys_model')
+    torch.save(trained_model, f'{model_name}.pth')
 
 
 def train_and_save_model(model, data, train_loader, model_name):
     best_learning_rate = 0.001
-    n_epochs = 200
+    n_epochs = 300
 
     if model_name == 'dias_model':
         y_val = data.dias_bp_val
     else:
         y_val = data.sys_bp_val
 
-    trained_model, train_objective_list, val_objective_list = train_resnet_model(model, best_learning_rate,
+    model_copy = copy.deepcopy(model)
+    test_model, train_objective_list, val_objective_list = train_resnet_model(model, best_learning_rate,
                                                                                  train_loader, data.images_val,
-                                                                                 y_val, n_epochs)
+                                                                                 y_val, n_epochs, model_name)
     optimal_number_of_steps = np.argmin(val_objective_list)
     n_epochs = optimal_number_of_steps
-    trained_model, train_objective_list, val_objective_list = train_resnet_model(model, best_learning_rate,
+    trained_model, train_objective_list, val_objective_list = train_resnet_model(model_copy, best_learning_rate,
                                                                                  train_loader, data.images_val,
-                                                                                 y_val, n_epochs)
+                                                                                 y_val, n_epochs, model_name)
     save_model(model_name, trained_model)
 
 
@@ -198,12 +194,13 @@ def main():
     torch.save(chunks_list, 'chunks_list')
 
     model = ResNet.create_resnet_model()
-
     save_model('dias_model', model)
     save_model('sys_model', model)
 
+    chunks_list = torch.load('chunks_list')
     for i, chunk in enumerate(chunks_list):
-        print(f"****** Start Train Chunk {i} ******")
+
+        print(f"****** Chunk {i} ******")
 
         """Save Data"""
         print("****** Get Chunk Data ******")
@@ -211,47 +208,68 @@ def main():
         path = f'{save_path}/{data_set_name}_chunk_{i}'
         save_data(data, path)
 
-    # chunks_list = torch.load('chunks_list')
-    # for i, chunk in enumerate(chunks_list):
-    #     """Load Data"""
-    #     # data = load_data_set(path)
-    #     dias_train_loader, _ = prepare_data(data.images_train, data.dias_bp_train)
-    #     sys_train_loader, _ = prepare_data(data.images_train, data.sys_bp_train)
-    #
-    #     """check train model"""
-    #     # model = ResNet.create_resnet_model()
-    #     # n_epochs = 20
-    #     # learning_rate = 0.01
-    #     # dias_model, _, _ = train_resnet_model(model, learning_rate, train_loader, data.images_val, data.dias_bp_val, n_epochs)
-    #     # sys_model, _, _= train_resnet_model(model, learning_rate, train_loader, data.images_val, data.sys_bp_val, n_epochs)
-    #
-    #     # if i == 0:
-    #     #     print("****** Fine Tuning ******")
-    #     #     """look for best learning rate"""
-    #     #     model = ResNet.create_resnet_model()
-    #     #     fine_tuning(model, dias_train_loader, data.images_val, data.dias_bp_val, 'dias_model')
-    #     #     fine_tuning(model, sys_train_loader, data.images_val, data.sys_bp_val, 'sys_model')
-    #
-    #     print("****** Train Dias Model ******")
-    #     dias_model = torch.load('dias_model')
-    #     train_and_save_model(dias_model, data, dias_train_loader, 'dias_model')
-    #
-    #     print("****** Train Sys Model ******")
-    #     sys_model = torch.load('sys_model')
-    #     train_and_save_model(sys_model, data, sys_train_loader, 'sys_model')
+    print("torch version:", torch.__version__)
+    if torch.cuda.is_available():
+        print("cuda version:", torch.version.cuda)
+        device = torch.device('cuda:0')
+        print("run on GPU.")
+    else:
+        device = torch.device('cpu')
+        print("no cuda GPU available")
+        print("run on CPU")
+
+    chunks_list = torch.load('chunks_list')
+    for i, chunk in enumerate(chunks_list):
+
+        """Load Data"""
+        path = f'{save_path}/{data_set_name}_chunk_{i}'
+        data = load_data_set(path)
+        train_loader, _ = prepare_data(data.images_train, data.dias_bp_train)
+
+        print("****** Train Dias Model ******")
+        print(f"****** Chunk {i} ******")
+        model = torch.load('dias_model.pth')
+        model.to(device)
+        model.eval()
+        train_and_save_model(model, data, train_loader, 'dias_model')
+
+        train_loader, _ = prepare_data(data.images_train, data.sys_bp_train)
+
+        print("****** Train Sys Model ******")
+        print(f"****** Chunk {i} ******")
+        model = torch.load('sys_model.pth')
+        model.to(device)
+        model.eval()
+        train_and_save_model(model, data, train_loader, 'sys_model')
 
     # model = ResNet.create_resnet_model()
     # model_name = dias_model
 
     # """Load Model"""
-    # dias_model = torch.load('dias_model')
+    # dias_model = torch.load('dias_model.pth')
+    # dias_model.to(device)
     # dias_model.eval()
     # calculate_test_score(dias_model, data.images_test, data.dias_bp_test, 'dias_model')
     #
-    # sys_model = torch.load('sys_model')
+    # sys_model = torch.load('sys_model.pth')
+    # sys_model.to(device)
     # sys_model.eval()
     # calculate_test_score(sys_model, data.images_test, data.sys_bp_test, 'sys_model')
 
 
 if __name__ == "__main__":
     main()
+
+    # """check train model"""
+    # model = ResNet.create_resnet_model()
+    # n_epochs = 20
+    # learning_rate = 0.01
+    # dias_model, _, _ = train_resnet_model(model, learning_rate, train_loader, data.images_val, data.dias_bp_val, n_epochs)
+    # sys_model, _, _= train_resnet_model(model, learning_rate, train_loader, data.images_val, data.sys_bp_val, n_epochs)
+
+    # if i == 0:
+    #     print("****** Fine Tuning ******")
+    #     """look for best learning rate"""
+    #     model = ResNet.create_resnet_model()
+    #     fine_tuning(model, dias_train_loader, data.images_val, data.dias_bp_val, 'dias_model')
+    #     fine_tuning(model, sys_train_loader, data.images_val, data.sys_bp_val, 'sys_model')
