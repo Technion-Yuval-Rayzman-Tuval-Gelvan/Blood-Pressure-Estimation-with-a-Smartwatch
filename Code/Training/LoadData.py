@@ -11,98 +11,91 @@ import tqdm
 from torch.autograd import Variable
 from torchvision import datasets, models, transforms
 from multiprocessing import Pool, Lock
-
-lock = Lock()
-
-class Data:
-
-    def __init__(self, images_train, images_val, images_test, dias_bp_list_train, dias_bp_list_val,
-                 dias_bp_list_test, sys_bp_list_train, sys_bp_list_val, sys_bp_list_test):
-        self.images_train = images_train
-        self.images_val = images_val
-        self.images_test = images_test
-        self.dias_bp_train = dias_bp_list_train
-        self.dias_bp_val = dias_bp_list_val
-        self.dias_bp_test = dias_bp_list_test
-        self.sys_bp_train = sys_bp_list_train
-        self.sys_bp_val = sys_bp_list_val
-        self.sys_bp_test = sys_bp_list_test
+from glob import glob
+from PIL import Image
+from torch.utils.data import Dataset, DataLoader
+import shutil
 
 
-class Patient:
+class customImageFolderDataset(Dataset):
+    """Custom Image Loader dataset."""
 
-    def __init__(self, patient_name):
-        self.patient_name = patient_name
-        self.images = []
-        self.dias_bp = []
-        self.sys_bp = []
-        self.names = []
+    def __init__(self, root, model_name, transform=None):
+        """
+        Args:
+            root (string): Path to the images organized in a particular folder structure.
+            transform: Any Pytorch transform to be applied
+        """
+        # Get all image paths from a directory
+        self.image_paths = glob(f"{root}/*/*")
+        # Get the labels from the image paths
+        if model_name == 'dias_model':
+            self.labels = [x.split("_")[-1][:-4] for x in self.image_paths]
+        else:
+            assert(model_name == 'sys_model')
+            self.labels = [x.split("_")[-2] for x in self.image_paths]
+        # Create a dictionary mapping each label to a index from 0 to len(classes).
+        self.label_to_idx = {x: i for i, x in enumerate(set(self.labels))}
+        self.transform = transform
 
-    def add_data(self, image, dias_bp, sys_bp, name):
-        self.images.append(image)
-        self.dias_bp.append(dias_bp)
-        self.sys_bp.append(sys_bp)
-        self.names.append(name)
+    def __len__(self):
+        # return length of dataset
+        return len(self.image_paths)
 
-    def get_patient_data(self):
-        return self.images, self.dias_bp, self.sys_bp
+    def __getitem__(self, idx):
+        # open and send one image and label
+        img_name = self.image_paths[idx]
+        label = self.labels[idx]
+        image = Image.open(img_name)
+        if self.transform:
+            image = self.transform(image)
+        return image, self.label_to_idx[label]
 
 
 def get_dir_list(data_path):
     return os.listdir(data_path)
 
 
-def read_patient_data(image_name):
-    patient_name = image_name.split('_')[0]
-    # root = '../../Test_Data/'
-    root = '../../Data/'
-    path = posixpath.join(root, patient_name, image_name)
-    data = (None, None, None, None)
-    if os.path.exists(path):
-        image = cv2.imread(posixpath.join(root, patient_name, image_name))
-
-        if len(image):
-            norm_image = cv2.resize(image, (110, 110))
-
-            # name example: 3000063_124.32324334151441_60.60244138052165
-            name = image_name.split('_')
-            systolic_bp = np.float(name[1])
-            diastolic_bp = np.float(name[2][:-4])
-
-            data = (norm_image, diastolic_bp, systolic_bp, image_name)
-
-    return data
+def print_some_images(data_loader):
+    for images_batch, label_batch in data_loader:
+        images = images_batch
+        break
+    print('Number of images in the dataset: {}'.format(len(images)))
+    print('Each images size is: {}'.format(images.shape[1:]))
+    print('These are the first 4 images:')
+    images = images.detach().to("cpu").numpy()
+    fig, ax_array = plt.subplots(4, 4)
+    for i, ax in enumerate(ax_array.flat):
+        ax.imshow(images[i][0], cmap='gray')
+        ax.set_yticks([])
+        ax.set_xticks([])
+    plt.show()
 
 
-def load_data(data_path, list_dir):
-    # traverse root directory, and list directories as dirs and files as files
-    print("loading images...")
-    total_patients_chunk = len(list_dir)
-    patients = []
-    for i, patient in enumerate(list_dir):
-        images = os.listdir(f"{data_path}/{patient}")
-        if images:
-            patient_name = images[0].split('_')[0]
-            new_patient = Patient(patient_name)
-            print(f"loading patient {patient_name} data.\npatient {i+1} out of {total_patients_chunk}.")
-            pool = Pool()
-            for image, diastolic_bp, systolic_bp, name in pool.imap(func=read_patient_data, iterable=images):
-                if name:
-                    new_patient.add_data(image, diastolic_bp, systolic_bp, name)
+def arrange_folders(data_path):
+    # Make Train Validation and Test directories
+    dir_names = ["Train", "Validation", "Test"]
 
-            patients.append(new_patient)
-            pool.close()
-            patients.append(new_patient)
+    train_list, val_list, test_list = split_data(data_path)
+    data_lists = [train_list, val_list, test_list]
 
-    patients = np.array(patients)
-    print("loading images done")
+    for i, list in enumerate(data_lists):
+        name = dir_names[i]
+        path = os.path.join(data_path, name)
+        if not os.path.exists(path):
+            os.mkdir(path)
 
-    return patients
+        print(path)
+        for patient in list:
+            print(patient)
+            shutil.move(os.path.join(data_path, patient), f"{path}/")
 
 
-def split_data(patients_data):
+def split_data(data_path):
+    dir_list = get_dir_list(data_path)
+    dir_list = np.array(dir_list)
 
-    n_patients = len(patients_data)
+    n_patients = len(dir_list)
 
     # Generate a random generator with a fixed seed
     rand_gen = np.random.RandomState(0)
@@ -118,112 +111,63 @@ def split_data(patients_data):
     val_indices = indices[n_patients_train:n_patients_val]
     test_indices = indices[n_patients_val:]
 
-    train_patients = patients_data[train_indices]
-    val_patients = patients_data[val_indices]
-    test_patients = patients_data[test_indices]
+    train_list = dir_list[train_indices]
+    validation_list = dir_list[val_indices]
+    test_list = dir_list[test_indices]
 
-    images_train = []
-    dias_bp_list_train = []
-    sys_bp_list_train = []
-    images_val = []
-    dias_bp_list_val = []
-    sys_bp_list_val = []
-    images_test = []
-    dias_bp_list_test = []
-    sys_bp_list_test = []
-
-    for patient in train_patients:
-        images, dias_bp, sys_bp = patient.get_patient_data()
-        images_train.append(images)
-        dias_bp_list_train.append(dias_bp)
-        sys_bp_list_train.append(sys_bp)
-
-    for patient in val_patients:
-        images, dias_bp, sys_bp = patient.get_patient_data()
-        images_val.append(images)
-        dias_bp_list_val.append(dias_bp)
-        sys_bp_list_val.append(sys_bp)
-
-    for patient in test_patients:
-        images, dias_bp, sys_bp = patient.get_patient_data()
-        images_test.append(images)
-        dias_bp_list_test.append(dias_bp)
-        sys_bp_list_test.append(sys_bp)
-
-    print("split data done")
-    # Extract the sub datasets from the full dataset using the calculated indices
-    images_train = np.concatenate(images_train)
-    dias_bp_list_train = np.concatenate(dias_bp_list_train)
-    sys_bp_list_train = np.concatenate(sys_bp_list_train)
-    images_val = np.concatenate(images_val)
-    dias_bp_list_val = np.concatenate(dias_bp_list_val)
-    sys_bp_list_val = np.concatenate(sys_bp_list_val)
-    images_test = np.concatenate(images_test)
-    dias_bp_list_test = np.concatenate(dias_bp_list_test)
-    sys_bp_list_test = np.concatenate(sys_bp_list_test)
-
-    data = Data(images_train, images_val, images_test, dias_bp_list_train, dias_bp_list_val,
-                dias_bp_list_test, sys_bp_list_train, sys_bp_list_val, sys_bp_list_test)
-    return data
-
-
-def print_some_images(images):
-    print('Number of images in the dataset: {}'.format(len(images)))
-    print('Each images size is: {}'.format(images.shape[1:]))
-    print('These are the first 4 images:')
-    fig, ax_array = plt.subplots(4, 4)
-    for i, ax in enumerate(ax_array.flat):
-        ax.imshow(images[i], cmap='gray')
-        ax.set_yticks([])
-        ax.set_xticks([])
-    plt.show()
-
-
-def get_data(data_path, list_dir):
-    patients_data = load_data(data_path, list_dir)
-    data = split_data(patients_data)
-
-    return data
-
-
-def get_data_chunks(data_path):
-    dir_list = get_dir_list(data_path)
-
-    n_patients = len(dir_list)
-
-    # Generate a random generator with a fixed seed
-    rand_gen = np.random.RandomState(0)
-
-    # Generating a shuffled vector of indices
-    indices = np.arange(n_patients)
-    rand_gen.shuffle(indices)
-
-    n_patients_per_chunk = int(n_patients / 250)
-    start = 0
-    end = n_patients_per_chunk
-    chunks_list = []
-    while end < n_patients:
-        chunks_list.append(dir_list[start:end])
-        start = end + 1
-        end += n_patients_per_chunk
-
-    chunks_list.append(dir_list[start:])
     print(f"Total Patients: {n_patients}")
+    print(f"Train Patients: {len(train_list)}")
+    print(f"Validation Patients: {len(validation_list)}")
+    print(f"Test Patients: {len(test_list)}")
 
-    return chunks_list
+    return train_list, validation_list, test_list
+
+
+def get_dataset(data_path, model_name, folder):
+    t = transforms.Compose([transforms.Resize(size=110),
+                            transforms.CenterCrop(size=110),
+                            transforms.Grayscale(),
+                            transforms.ToTensor()])
+    dir = f"{data_path}/Test"
+    dataset = customImageFolderDataset(root=dir, transform=t, model_name=model_name)
+    print(f"{folder} Dataset")
+    print("Num Images in Dataset:", len(dataset))
+    print("Example Image and Label:", dataset[2])
+    data_loader = DataLoader(dataset, batch_size = 64, shuffle=True, num_workers=10)
+    for image_batch, label_batch in data_loader:
+        print("Image and Label Batch Size:", image_batch.size(), label_batch.size())
+        break
+
+    return data_loader
+
+
+def print_batch_size(data_loader):
+    for image_batch, label_batch in data_loader:
+        print(image_batch.size(), label_batch.size())
+        break
 
 
 def main():
-    # data_path = '../../Test_Data'
-    data_path = '../../Data'
-    chunks_list = get_data_chunks(data_path)
-    # print (chunks_list)
-    # dir_list = get_dir_list('../../Data/3042410')
-    # print(dir_list)
-    # patients_data = load_data(data_path, dir_list)
-    # data = split_data(patients_data)
-    # print_some_images(data.images_train)
+    """Paths"""
+    data_path = '../../Test_Data'
+    # data_path = '../../Data'
 
+    """Split images to Test/Val/Test folders
+       Activate only if all patients in the same directory"""
+    # arrange_folders(data_path)
+
+
+    """Check how to get image from folder"""
+    # test_image_paths = glob(f"{data_path}/Test/*/*")
+    # dias_labels = [x.split("_")[-1][:-4] for x in test_image_paths]
+    # sys_labels = [x.split("_")[-2] for x in test_image_paths]
+    # print(f"Image Path Example: {test_image_paths[0]}")
+    # print(f"Dias Label Example: {dias_labels[0]}")
+    # print(f"Sys Label Example: {sys_labels[0]}")
+
+    """Get data example"""
+    dias_train_loader = get_dataset(data_path, 'dias_model', "Train")
+    print_some_images(dias_train_loader)
 
 if __name__ == "__main__":
     main()

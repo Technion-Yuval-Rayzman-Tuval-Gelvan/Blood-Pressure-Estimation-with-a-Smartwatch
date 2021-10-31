@@ -9,6 +9,7 @@ import torchvision
 import tqdm
 from torchvision import datasets, models, transforms
 from datetime import datetime
+from pytictoc import TicToc
 
 # Set some default values of the the matplotlib plots
 from Code.Training import LoadData
@@ -17,49 +18,88 @@ from Code.Training import ResNet
 plt.rcParams['figure.figsize'] = (8.0, 8.0)  # Set default plot's sizes
 plt.rcParams['axes.grid'] = True  # Show grid by default in figures
 
+def train(model, learning_rate, n_epochs, train_loader, val_loader):
 
-def train(model, learning_rate, n_epochs, train_loader, x_val, y_val):
-    # Move validation set to the GPU
-    x_val = x_val.cuda()
-    y_val = y_val.cuda()
+    # Number of epochs already trained (if using loaded in model weights)
+    try:
+        print(f'Model has been trained for: {model.epochs} epochs.\n')
+    except:
+        model.epochs = 0
+        print(f'Starting Training from Scratch.\n')
 
     # Prepare lists to store intermediate obejectives
     train_objective_list = [np.inf]
     val_objective_list = [np.inf]
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    criterion = torch.nn.L1Loss()
+    device = get_device()
 
     # Run for n_epochs
     for epoch in tqdm.tqdm(range(n_epochs)):
-        # Run over the batches
-        for x, y in train_loader:  # forward
 
-            # Move batch to GPU
-            x = x.cuda()
-            y = y.cuda()
+        # Set to training
+        model.train()
 
-            # start training
+        # keep track of training and validation loss each epoch
+        train_loss = 0.0
+        valid_loss = 0.0
+
+        # Training loop
+        for i, (data, target) in enumerate(train_loader):
+            # Tensors to gpu
+            data, target = data.to(device), target.to(device)
+
+            # Clear gradients
             optimizer.zero_grad()
-            # forward
-            py_hat = np.squeeze(model(x))
-            loss = torch.nn.functional.l1_loss(py_hat, y)
-            # backward
+            # Predicted output
+            output = np.squeeze(model(data))
+
+            # Loss and backpropagation of gradients
+            loss = criterion(output, target)
             loss.backward()
+
+            # Update the parameters
             optimizer.step()
 
-        # Evaluate the objective on the validation set
-        with torch.no_grad():  # This tell PyTorch not to calculate the gradients to save time
-            train_objective_list.append(loss.item())
-            # forward
-            py_hat = np.squeeze(model(x_val))
-            # loss
-            loss = torch.nn.functional.l1_loss(py_hat, y_val)
-            val_objective_list.append(loss.item())
+            train_loss += loss.item()
+
+        # After training loops ends, start validation
+        else:
+            model.epochs += 1
+
+            # Don't need to keep track of gradients
+            with torch.no_grad():
+                # Set to evaluation mode
+                model.eval()
+
+                # Validation loop
+                for data, target in val_loader:
+                    # Tensors to gpu
+                    data, target = data.to(device), target.to(device)
+
+                    # Forward pass
+                    output = np.squeeze(model(data))
+
+                    # Validation loss
+                    loss = criterion(output, target)
+
+                    valid_loss += loss.item()
+
+                # Calculate average losses
+                train_loss = train_loss / len(train_loader.dataset)
+                valid_loss = valid_loss / len(val_loader.dataset)
+
+                # Save validation loss
+                val_objective_list.append(valid_loss)
+                train_objective_list.append(train_loss)
+
+                print(train_loss, valid_loss)
 
     return train_objective_list, val_objective_list
 
 
-def fine_tuning(model, train_loader, x_val, y_val, model_name):
+def fine_tuning(model, train_loader, val_loader, model_name):
     n_epochs = 200
     etas_list = [3e-3, 1e-3, 3e-2, 1e-2]
 
@@ -67,8 +107,7 @@ def fine_tuning(model, train_loader, x_val, y_val, model_name):
     for i_eta, eta in enumerate(etas_list):
         model_copy = copy.deepcopy(model)
         train_objective_list, val_objective_list = train(model_copy, eta, n_epochs, train_loader,
-                                                         torch.tensor(x_val).float(),
-                                                         torch.tensor(y_val).float())
+                                                         val_loader)
 
         # Plot
         ax = axes.flat[i_eta]
@@ -86,10 +125,8 @@ def fine_tuning(model, train_loader, x_val, y_val, model_name):
     plt.savefig(f'../../Results/fine_tuning_{now}_{model_name}.png')
 
 
-def train_resnet_model(model, learning_rate, train_loader, x_val, y_val, n_epochs, model_name):
-    train_objective_list, val_objective_list = train(model, learning_rate, n_epochs, train_loader,
-                                                     torch.tensor(x_val).float(),
-                                                     torch.tensor(y_val).float())
+def train_model(model, learning_rate, train_loader, val_loader, n_epochs, model_name):
+    train_objective_list, val_objective_list = train(model, learning_rate, n_epochs, train_loader, val_loader)
 
     # Plot
     fig, ax = plt.subplots(figsize=(5, 5))
@@ -105,15 +142,6 @@ def train_resnet_model(model, learning_rate, train_loader, x_val, y_val, n_epoch
     plt.savefig(f'../../Results/{model_name}/training_{now}.png')
 
     return model, train_objective_list, val_objective_list
-
-
-def prepare_data(x, y):
-    batch_size = 64
-    data_set = torch.utils.data.TensorDataset(torch.tensor(x).float(), torch.tensor(y).float())
-    loader = torch.utils.data.DataLoader(dataset=data_set, shuffle=True, batch_size=batch_size, num_workers=2,
-                                         drop_last=True, pin_memory=False)
-
-    return loader, data_set
 
 
 def calculate_test_score(model, test_images, test_labels, model_name):
@@ -162,52 +190,20 @@ def save_model(model_name, trained_model):
     torch.save(trained_model, f'{model_name}.pth')
 
 
-def train_and_save_model(model, data, train_loader, model_name):
+def train_and_save_model(model, train_loader, val_loader, model_name, model_path):
     best_learning_rate = 0.001
-    n_epochs = 300
+    n_epochs = 200
 
-    if model_name == 'dias_model':
-        y_val = data.dias_bp_val
-    else:
-        y_val = data.sys_bp_val
-
-    model_copy = copy.deepcopy(model)
-    test_model, train_objective_list, val_objective_list = train_resnet_model(model, best_learning_rate,
-                                                                                 train_loader, data.images_val,
-                                                                                 y_val, n_epochs, model_name)
+    test_model, train_objective_list, val_objective_list = train_model(model, best_learning_rate,
+                                                                                 train_loader, val_loader, n_epochs, model_name)
     optimal_number_of_steps = np.argmin(val_objective_list)
     n_epochs = optimal_number_of_steps
-    trained_model, train_objective_list, val_objective_list = train_resnet_model(model_copy, best_learning_rate,
-                                                                                 train_loader, data.images_val,
-                                                                                 y_val, n_epochs, model_name)
-    save_model(model_name, trained_model)
+    trained_model, train_objective_list, val_objective_list = train_model(model_copy, best_learning_rate,
+                                                                                 train_loader, val_loader, n_epochs, model_name)
+    save_model(f'{model_path}/{model_name}', trained_model)
 
 
-def main():
-    """Paths"""
-    # data_path = '../../Test_Data'
-    data_path = '../../Data'
-    save_path = '../../Dataset'
-    # data_set_name = 'test_data_set'
-    data_set_name = 'data_set'
-    chunks_list = LoadData.get_data_chunks(data_path)
-    torch.save(chunks_list, 'chunks_list')
-
-    model = ResNet.create_resnet_model()
-    save_model('dias_model', model)
-    save_model('sys_model', model)
-
-    chunks_list = torch.load('chunks_list')
-    for i, chunk in enumerate(chunks_list):
-
-        print(f"****** Chunk {i} ******")
-
-        """Save Data"""
-        print("****** Get Chunk Data ******")
-        data = LoadData.get_data(data_path, chunk)
-        path = f'{save_path}/{data_set_name}_chunk_{i}'
-        save_data(data, path)
-
+def get_device():
     print("torch version:", torch.__version__)
     if torch.cuda.is_available():
         print("cuda version:", torch.version.cuda)
@@ -217,33 +213,63 @@ def main():
         device = torch.device('cpu')
         print("no cuda GPU available")
         print("run on CPU")
+        
+    return device
 
-    chunks_list = torch.load('chunks_list')
-    for i, chunk in enumerate(chunks_list):
+def main():
+    """Paths"""
+    data_path = '../../Test_Data'
+    # data_path = '../../Data'
+    save_path = '../../Dataset'
+    model_path = '../../Models'
 
-        """Load Data"""
-        path = f'{save_path}/{data_set_name}_chunk_{i}'
-        data = load_data_set(path)
-        train_loader, _ = prepare_data(data.images_train, data.dias_bp_train)
+    """Name"""
+    # data_set_name = 'test_data_set'
+    data_set_name = 'data_set'
 
-        print("****** Train Dias Model ******")
-        print(f"****** Chunk {i} ******")
-        model = torch.load('dias_model.pth')
-        model.to(device)
-        model.eval()
-        train_and_save_model(model, data, train_loader, 'dias_model')
+    """Create Model"""
+    model = ResNet.create_resnet_model()
+    # save_model(f'{model_path}/dias_model', model)
+    # save_model(f'{model_path}/sys_model', model)
 
-        train_loader, _ = prepare_data(data.images_train, data.sys_bp_train)
+    """Get Device"""
+    device = get_device()
+    model.to(device)
 
-        print("****** Train Sys Model ******")
-        print(f"****** Chunk {i} ******")
-        model = torch.load('sys_model.pth')
-        model.to(device)
-        model.eval()
-        train_and_save_model(model, data, train_loader, 'sys_model')
+    """Get Data"""
+    train_loader = LoadData.get_dataset(data_path, 'dias_model', 'Train')
+    val_loader = LoadData.get_dataset(data_path, 'dias_model', 'Validation')
 
-    # model = ResNet.create_resnet_model()
-    # model_name = dias_model
+    """Check Model"""
+    # n_epochs = 200
+    # learning_rate = 0.01
+    # print("Check Dias Model")
+    # dias_model, _, _ = train_model(model, learning_rate, train_loader, val_loader, n_epochs, 'dias_model')
+    #
+    # model = ResNet.create_resnet_model().to(device)
+    # train_loader = LoadData.get_dataset(data_path, 'sys_model', 'Train')
+    # val_loader = LoadData.get_dataset(data_path, 'sys_model', 'Validation')
+    # print("Check Sys Model")
+    # sys_model, _, _= train_model(model, learning_rate, train_loader, val_loader, n_epochs, 'sys_model')
+
+    """Fine Tuning"""
+    model = ResNet.create_resnet_model().to(device)
+    fine_tuning(model, train_loader, val_loader, 'dias_model')
+
+    model = ResNet.create_resnet_model().to(device)
+    train_loader = LoadData.get_dataset(data_path, 'sys_model', 'Train')
+    val_loader = LoadData.get_dataset(data_path, 'sys_model', 'Validation')
+    fine_tuning(model, train_loader, val_loader, 'sys_model')
+
+    # print("****** Train Dias Model ******")
+    # model = torch.load('dias_model.pth')
+    # model.to(device)
+    # train_and_save_model(model, train_loader, val_loader, 'dias_model', model_path)
+    # 
+    # print("****** Train Sys Model ******")
+    # model = torch.load('sys_model.pth')
+    # model.to(device)
+    # train_and_save_model(model, train_loader, val_loader, 'sys_model', model_path)
 
     # """Load Model"""
     # dias_model = torch.load('dias_model.pth')
@@ -259,17 +285,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-    # """check train model"""
-    # model = ResNet.create_resnet_model()
-    # n_epochs = 20
-    # learning_rate = 0.01
-    # dias_model, _, _ = train_resnet_model(model, learning_rate, train_loader, data.images_val, data.dias_bp_val, n_epochs)
-    # sys_model, _, _= train_resnet_model(model, learning_rate, train_loader, data.images_val, data.sys_bp_val, n_epochs)
-
-    # if i == 0:
-    #     print("****** Fine Tuning ******")
-    #     """look for best learning rate"""
-    #     model = ResNet.create_resnet_model()
-    #     fine_tuning(model, dias_train_loader, data.images_val, data.dias_bp_val, 'dias_model')
-    #     fine_tuning(model, sys_train_loader, data.images_val, data.sys_bp_val, 'sys_model')
