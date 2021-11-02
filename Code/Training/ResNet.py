@@ -12,8 +12,7 @@ def create_resnet_model():
     out_channels = model.conv1.out_channels
     kernel_size = model.conv1.kernel_size
     padding = model.conv1.padding
-    model.conv1 = nn.Conv2d(in_channels=110, out_channels=out_channels, kernel_size=kernel_size, padding=padding)
+    model.conv1 = nn.Conv2d(in_channels=1, out_channels=out_channels, kernel_size=kernel_size, padding=padding)
     model.fc = nn.Linear(in_features=model.fc.in_features, out_features=1)
-    model = model.cuda()
 
     return model

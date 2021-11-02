@@ -128,12 +128,12 @@ def get_dataset(data_path, model_name, folder):
                             transforms.CenterCrop(size=110),
                             transforms.Grayscale(),
                             transforms.ToTensor()])
-    dir = f"{data_path}/Test"
-    dataset = customImageFolderDataset(root=dir, transform=t, model_name=model_name)
+    dir = f"{data_path}/{folder}"
     print(f"{folder} Dataset")
+    dataset = customImageFolderDataset(root=dir, transform=t, model_name=model_name)
     print("Num Images in Dataset:", len(dataset))
     print("Example Image and Label:", dataset[2])
-    data_loader = DataLoader(dataset, batch_size = 64, shuffle=True, num_workers=10)
+    data_loader = DataLoader(dataset, batch_size=32, num_workers=8, pin_memory=True)
     for image_batch, label_batch in data_loader:
         print("Image and Label Batch Size:", image_batch.size(), label_batch.size())
         break
@@ -149,8 +149,8 @@ def print_batch_size(data_loader):
 
 def main():
     """Paths"""
-    data_path = '../../Test_Data'
-    # data_path = '../../Data'
+    # data_path = '../../Test_Data'
+    data_path = '../../Data'
 
     """Split images to Test/Val/Test folders
        Activate only if all patients in the same directory"""
@@ -168,6 +168,7 @@ def main():
     """Get data example"""
     dias_train_loader = get_dataset(data_path, 'dias_model', "Train")
     print_some_images(dias_train_loader)
+
 
 if __name__ == "__main__":
     main()
