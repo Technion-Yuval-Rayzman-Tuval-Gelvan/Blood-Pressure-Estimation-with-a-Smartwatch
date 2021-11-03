@@ -1,5 +1,4 @@
 import os
-import posixpath
 import cv2
 import numpy as np
 import pandas as pd
@@ -16,6 +15,11 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 import shutil
 
+t = transforms.Compose([transforms.Resize(size=110),
+                        transforms.CenterCrop(size=110),
+                        transforms.Grayscale(),
+                        transforms.ToTensor()])
+
 
 class customImageFolderDataset(Dataset):
     """Custom Image Loader dataset."""
@@ -30,10 +34,10 @@ class customImageFolderDataset(Dataset):
         self.image_paths = glob(f"{root}/*/*")
         # Get the labels from the image paths
         if model_name == 'dias_model':
-            self.labels = [x.split("_")[-1][:-4] for x in self.image_paths]
+            self.labels = [x.split("_")[-1][:-4].to(float) for x in self.image_paths]
         else:
-            assert(model_name == 'sys_model')
-            self.labels = [x.split("_")[-2] for x in self.image_paths]
+            assert (model_name == 'sys_model')
+            self.labels = [x.split("_")[-2].to(float) for x in self.image_paths]
         # Create a dictionary mapping each label to a index from 0 to len(classes).
         self.label_to_idx = {x: i for i, x in enumerate(set(self.labels))}
         self.transform = transform
@@ -46,10 +50,10 @@ class customImageFolderDataset(Dataset):
         # open and send one image and label
         img_name = self.image_paths[idx]
         label = self.labels[idx]
-        image = Image.open(img_name)
+        image = cv2.imread(img_name)
         if self.transform:
             image = self.transform(image)
-        return image, self.label_to_idx[label]
+        return image, label
 
 
 def get_dir_list(data_path):
@@ -133,7 +137,7 @@ def get_dataset(data_path, model_name, folder):
     dataset = customImageFolderDataset(root=dir, transform=t, model_name=model_name)
     print("Num Images in Dataset:", len(dataset))
     print("Example Image and Label:", dataset[2])
-    data_loader = DataLoader(dataset, batch_size=32, num_workers=8, pin_memory=True)
+    data_loader = DataLoader(dataset, batch_size=64, num_workers=16, pin_memory=True)
     for image_batch, label_batch in data_loader:
         print("Image and Label Batch Size:", image_batch.size(), label_batch.size())
         break
@@ -147,6 +151,12 @@ def print_batch_size(data_loader):
         break
 
 
+def check_images(img_name):
+    print(img_name)
+    image = Image.open(img_name)
+    image = t(image)
+
+
 def main():
     """Paths"""
     # data_path = '../../Test_Data'
@@ -155,7 +165,6 @@ def main():
     """Split images to Test/Val/Test folders
        Activate only if all patients in the same directory"""
     # arrange_folders(data_path)
-
 
     """Check how to get image from folder"""
     # test_image_paths = glob(f"{data_path}/Test/*/*")
@@ -166,8 +175,17 @@ def main():
     # print(f"Sys Label Example: {sys_labels[0]}")
 
     """Get data example"""
-    dias_train_loader = get_dataset(data_path, 'dias_model', "Train")
-    print_some_images(dias_train_loader)
+    # dias_train_loader = get_dataset(data_path, 'dias_model', "Train")
+
+    # print_some_images(dias_train_loader)
+
+    """Debug to find images with errors"""
+    # image_paths = glob(f"{data_path}/Train/3002229/*")
+    # start_idx = int((len(image_paths)/100)*33)
+    # image_paths = image_paths[start_idx:]
+    # pool = Pool()
+    # for _ in tqdm.tqdm(pool.imap(func=check_images, iterable=image_paths), total=len(image_paths)):
+    #     pass
 
 
 if __name__ == "__main__":

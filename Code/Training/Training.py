@@ -10,11 +10,14 @@ import tqdm
 import time
 from torchvision import datasets, models, transforms
 from datetime import datetime
+import sys, os
+sys.path.append(os.path.abspath(os.path.join('..', 'LoadData')))
+sys.path.append(os.path.abspath(os.path.join('..', 'ResNet')))
+# Now do your import
+import LoadData
+import ResNet
 
 # Set some default values of the the matplotlib plots
-from Code.Training import LoadData
-from Code.Training import ResNet
-
 plt.rcParams['figure.figsize'] = (8.0, 8.0)  # Set default plot's sizes
 plt.rcParams['axes.grid'] = True  # Show grid by default in figures
 print_every = 10
@@ -64,13 +67,13 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name):
         # Training loop
         for i, (data, target) in enumerate(train_loader):
             # Tensors to gpu
-            data, target = data.to(device), target.to(device)
+            data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
 
             # Clear gradients
             optimizer.zero_grad()
             # Predicted output
             output = np.squeeze(model(data))
-
+            print(output, target)
             # Loss and backpropagation of gradients
             loss = criterion(output, target)
             loss.backward()
@@ -249,8 +252,8 @@ def get_device():
 
 def main():
     """Paths"""
-    # data_path = '../../Test_Data'
-    data_path = '../../Data'
+    data_path = '../../Test_Data'
+    # data_path = '../../Data'
     model_path = '../../Models'
 
     """Create Model"""
