@@ -20,8 +20,8 @@ import ResNet
 # Set some default values of the the matplotlib plots
 plt.rcParams['figure.figsize'] = (8.0, 8.0)  # Set default plot's sizes
 plt.rcParams['axes.grid'] = True  # Show grid by default in figures
-print_every = 10
-max_epochs_stop = 30
+print_every = 1
+max_epochs_stop = 3
 
 
 # Reference - 'https://towardsdatascience.com/end-to-end-pipeline-for-setting-up-multiclass-image-classification-for
@@ -63,9 +63,15 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name):
         # keep track of training and validation loss each epoch
         train_loss = 0.0
         valid_loss = 0.0
+        train_loss_items = 0
+        valid_loss_items = 0
 
         # Training loop
         for i, (data, target) in enumerate(train_loader):
+
+            if data is None or target is None:
+                continue
+
             # Tensors to gpu
             data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
 
@@ -73,7 +79,7 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name):
             optimizer.zero_grad()
             # Predicted output
             output = np.squeeze(model(data))
-            print(output, target)
+
             # Loss and backpropagation of gradients
             loss = criterion(output, target)
             loss.backward()
@@ -82,6 +88,7 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name):
             optimizer.step()
 
             train_loss += loss.item()
+            train_loss_items += 1
 
             # Track training progress
             print(f"\rEpoch: {epoch}\t{100 * (i + 1) / len(train_loader):.2f}% complete. {(time.time() - start):.2f} seconds elapsed in epoch.", end='')
@@ -97,6 +104,10 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name):
 
                 # Validation loop
                 for data, target in val_loader:
+
+                    if data is None or target is None:
+                        continue
+
                     # Tensors to gpu
                     data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
 
@@ -107,10 +118,11 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name):
                     loss = criterion(output, target)
 
                     valid_loss += loss.item()
+                    valid_loss_items += 1
 
                 # Calculate average losses
-                train_loss = train_loss / len(train_loader.dataset)
-                valid_loss = valid_loss / len(val_loader.dataset)
+                train_loss = train_loss / train_loss_items
+                valid_loss = valid_loss / valid_loss_items
 
                 # Save validation loss
                 val_objective_list.append(valid_loss)
@@ -194,18 +206,19 @@ def train_model(model, train_loader, val_loader, model_name):
     plt.savefig(f'../../Results/{model_name}/training_{now}.png')
 
 
-def calculate_test_score(model, test_images, test_labels, model_name):
-    test_loader, _ = prepare_data(test_images, test_labels)
+def calculate_test_score(model, test_loader, model_name):
     total_mse = 0
     total_mae = 0
     num_samples = 0
+    device = get_device()
 
     # Evaluate the score on the test set
     with torch.no_grad():
         errors = []
+        # Test loop
         for x, y in test_loader:
-            x = x.cuda()
-            y = y.cuda()
+            # Tensors to gpu
+            x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
 
             y_hat = np.squeeze(model(x))
             error = ((y_hat - y).abs()).sum().cpu()
@@ -252,8 +265,8 @@ def get_device():
 
 def main():
     """Paths"""
-    data_path = '../../Test_Data'
-    # data_path = '../../Data'
+    # data_path = '../../Test_Data'
+    data_path = '../../Data'
     model_path = '../../Models'
 
     """Create Model"""
@@ -306,16 +319,20 @@ def main():
     val_loader = LoadData.get_dataset(data_path, 'sys_model', 'Validation')
     train_model(model, train_loader, val_loader, 'sys_model')
 
-    # """Load Model"""
+    # print("****** Check Test Score *******")
+    # """Load Dias Model"""
     # model_name = 'dias_model'
     # save_file_name = f'{model_path}/{model_name}.pt'
     # model.load_state_dict(torch.load(save_file_name)).to(device)
-    # calculate_test_score(dias_model, data.images_test, data.dias_bp_test, 'dias_model')
+    # test_loader = LoadData.get_dataset(data_path, 'dias_model', 'Test')
+    # calculate_test_score(model, test_loader, model_name)
     #
-    # sys_model = torch.load('sys_model.pth')
-    # sys_model.to(device)
-    # sys_model.eval()
-    # calculate_test_score(sys_model, data.images_test, data.sys_bp_test, 'sys_model')
+    # """Load Sys Model"""
+    # model_name = 'sys_model'
+    # save_file_name = f'{model_path}/{model_name}.pt'
+    # model.load_state_dict(torch.load(save_file_name)).to(device)
+    # test_loader = LoadData.get_dataset(data_path, 'dias_model', 'Test')
+    # calculate_test_score(model, test_loader, model_name)
 
 
 if __name__ == "__main__":
