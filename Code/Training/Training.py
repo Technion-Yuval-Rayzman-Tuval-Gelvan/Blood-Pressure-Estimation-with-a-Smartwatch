@@ -21,24 +21,27 @@ import ResNet
 plt.rcParams['figure.figsize'] = (8.0, 8.0)  # Set default plot's sizes
 plt.rcParams['axes.grid'] = True  # Show grid by default in figures
 print_every = 1
-max_epochs_stop = 3
+max_epochs_stop = 40
 
 
 # Reference - 'https://towardsdatascience.com/end-to-end-pipeline-for-setting-up-multiclass-image-classification-for
 # -data-scientists-2e051081d41c'
-def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name):
+def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, save_file_name):
 
     # Early stopping intialization
     epochs_no_improve = 0
     valid_loss_min = np.Inf
 
-    # Prepare lists to store intermediate obejectives
-    train_objective_list = [np.inf]
-    val_objective_list = [np.inf]
+    # Prepare lists to store intermediate objectives
+    lists_path = f"../../Variables/objective_lists"
+    if not os.path.exists(lists_path):
+        train_objective_list = [np.inf]
+        val_objective_list = [np.inf]
+    else:
+        val_objective_list, train_objective_list = load_data(lists_path)
 
     # Initial Parameters
     overall_start = time.time()
-    save_file_name = f'../../Models/{model_name}.pt'
 
     # criterion (PyTorch loss): objective to minimize
     # optimizer (PyTorch optimizier): optimizer to compute gradients of model parameters
@@ -135,7 +138,9 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name):
                 # Save the model if validation loss decreases
                 if valid_loss < valid_loss_min:
                     # Save model
+                    print(f"Save better model. last valid loss: {valid_loss_min}. new valid loss: {valid_loss}")
                     torch.save(model.state_dict(), save_file_name)
+                    save_data((val_objective_list, train_objective_list), lists_path)
                     # Track improvement
                     epochs_no_improve = 0
                     valid_loss_min = valid_loss
@@ -160,7 +165,7 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name):
     return train_objective_list, val_objective_list
 
 
-def fine_tuning(model, train_loader, val_loader, model_name):
+def fine_tuning(model, train_loader, val_loader, model_name, save_file_name):
     n_epochs = 200
     etas_list = [3e-3, 1e-3, 3e-2, 1e-2]
 
@@ -168,7 +173,7 @@ def fine_tuning(model, train_loader, val_loader, model_name):
     for i_eta, eta in enumerate(etas_list):
         model_copy = copy.deepcopy(model)
         train_objective_list, val_objective_list = train(model_copy, eta, n_epochs, train_loader,
-                                                         val_loader, model_name)
+                                                         val_loader, model_name, save_file_name)
 
         # Plot
         ax = axes.flat[i_eta]
@@ -186,11 +191,11 @@ def fine_tuning(model, train_loader, val_loader, model_name):
     plt.savefig(f'../../Results/fine_tuning_{now}_{model_name}.png')
 
 
-def train_model(model, train_loader, val_loader, model_name):
-    learning_rate = 0.003
-    n_epochs = 90
+def train_model(model, train_loader, val_loader, model_name, save_file_name):
+    learning_rate = 0.001
+    n_epochs = 200
 
-    train_objective_list, val_objective_list = train(model, learning_rate, n_epochs, train_loader, val_loader, model_name)
+    train_objective_list, val_objective_list = train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, save_file_name)
 
     # Plot
     fig, ax = plt.subplots(figsize=(5, 5))
@@ -242,7 +247,7 @@ def save_data(data, path):
         pickle.dump(data, file)
 
 
-def load_data_set(path):
+def load_data(path):
     with open(path, 'rb') as file:
         data_set = pickle.load(file)
 
@@ -265,6 +270,10 @@ def get_device():
 
 def main():
     """Paths"""
+    # data_path = '/media/tuvalgelvan@staff.technion.ac.il/hd-21/Estimated-Blood-Presure-Project/Blood-Pressure' \
+    #             '-Estimation-with-a-Smartwatch/Data'
+    # model_path ='/media/tuvalgelvan@staff.technion.ac.il/hd-21/Estimated-Blood-Presure-Project/Blood-Pressure' \
+    #             '-Estimation-with-a-Smartwatch/Models'
     # data_path = '../../Test_Data'
     data_path = '../../Data'
     model_path = '../../Models'
@@ -281,43 +290,63 @@ def main():
     """Check Model"""
     # n_epochs = 200
     # learning_rate = 0.01
+    # model_name = 'dias_model'
+    # save_file_name = f'../../Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
     # train_loader = LoadData.get_dataset(data_path, 'dias_model', 'Train')
     # val_loader = LoadData.get_dataset(data_path, 'dias_model', 'Validation')
     # print("Check Dias Model")
-    # dias_model, _, _ = train_model(model, learning_rate, train_loader, val_loader, n_epochs, 'dias_model')
+    # dias_model, _, _ = train_model(model, learning_rate, train_loader, val_loader, n_epochs, 'dias_model', save_file_name)
     #
     # model = ResNet.create_resnet_model().to(device)
+    # model_name = 'sys_model'
+    # save_file_name = f'../../Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
     # train_loader = LoadData.get_dataset(data_path, 'sys_model', 'Train')
     # val_loader = LoadData.get_dataset(data_path, 'sys_model', 'Validation')
     # print("Check Sys Model")
-    # sys_model, _, _= train_model(model, learning_rate, train_loader, val_loader, n_epochs, 'sys_model')
+    # sys_model, _, _= train_model(model, learning_rate, train_loader, val_loader, n_epochs, 'sys_model', save_file_name)
 
     """Fine Tuning"""
     # model = ResNet.create_resnet_model().to(device)
+    # model_name = 'dias_model'
+    # save_file_name = f'../../Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
     # train_loader = LoadData.get_dataset(data_path, 'dias_model', 'Train')
     # val_loader = LoadData.get_dataset(data_path, 'dias_model', 'Validation')
-    # fine_tuning(model, train_loader, val_loader, 'dias_model')
+    # fine_tuning(model, train_loader, val_loader, 'dias_model', save_file_name)
     #
     # model = ResNet.create_resnet_model().to(device)
+    # model_name = 'sys_model'
+    # save_file_name = f'../../Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
     # train_loader = LoadData.get_dataset(data_path, 'sys_model', 'Train')
     # val_loader = LoadData.get_dataset(data_path, 'sys_model', 'Validation')
-    # fine_tuning(model, train_loader, val_loader, 'sys_model')
+    # fine_tuning(model, train_loader, val_loader, 'sys_model', save_file_name)
 
-    print("****** Train Dias Model ******")
-    # model = torch.load('dias_model.pth')
-    # model.to(device)
-    model = ResNet.create_resnet_model().to(device)
-    train_loader = LoadData.get_dataset(data_path, 'dias_model', 'Train')
-    val_loader = LoadData.get_dataset(data_path, 'dias_model', 'Validation')
-    train_model(model, train_loader, val_loader, 'dias_model')
+    offset = 200000
 
-    print("****** Train Sys Model ******")
-    # model = torch.load('sys_model.pth')
-    # model.to(device)
-    model = ResNet.create_resnet_model().to(device)
-    train_loader = LoadData.get_dataset(data_path, 'sys_model', 'Train')
-    val_loader = LoadData.get_dataset(data_path, 'sys_model', 'Validation')
-    train_model(model, train_loader, val_loader, 'sys_model')
+    while offset < 10000000:
+
+        print("****** Train Dias Model ******")
+        model = ResNet.create_resnet_model().to(device)
+        model_name = 'dias_model'
+        save_file_name = f'../../Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
+        if os.path.exists(save_file_name):
+            # Load the best state dict
+            model.load_state_dict(torch.load(save_file_name))
+        train_loader = LoadData.get_dataset(data_path, model_name, 'Train', offset)
+        val_loader = LoadData.get_dataset(data_path, model_name, 'Validation', offset)
+        train_model(model, train_loader, val_loader, model_name, save_file_name)
+
+        print("****** Train Sys Model ******")
+        model_name = 'sys_model'
+        save_file_name = f'../../Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
+        if os.path.exists(save_file_name):
+            # Load the best state dict
+            model.load_state_dict(torch.load(save_file_name))
+        model = ResNet.create_resnet_model().to(device)
+        train_loader = LoadData.get_dataset(data_path, model_name, 'Train', offset)
+        val_loader = LoadData.get_dataset(data_path, model_name, 'Validation', offset)
+        train_model(model, train_loader, val_loader, model_name, save_file_name)
+
+        offset += 100000
 
     # print("****** Check Test Score *******")
     # """Load Dias Model"""

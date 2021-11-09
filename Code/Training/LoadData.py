@@ -14,26 +14,38 @@ from glob import glob
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 import shutil
+import sys
+sys.path.append(os.path.abspath(os.path.join('..', 'Training.py')))
+import Training
 
 batch_size = 32
-
+total_samples = 100000
 t = transforms.Compose([transforms.Resize(size=110),
                         transforms.CenterCrop(size=110),
                         transforms.Grayscale(),
                         transforms.ToTensor()])
 
 
-class customImageFolderDataset(Dataset):
+class CustomImageFolderDataset(Dataset):
     """Custom Image Loader dataset."""
 
-    def __init__(self, root, model_name, transform=None):
+    def __init__(self, root, folder, model_name, subset_len: int, offset=0, transform=None):
         """
         Args:
             root (string): Path to the images organized in a particular folder structure.
             transform: Any Pytorch transform to be applied
         """
+
+        save_path = f"{root}/Images_paths/{folder}"
+
+        """Once get images paths and save"""
         # Get all image paths from a directory
-        self.image_paths = glob(f"{root}/*/*")
+        if not os.path.exists(save_path):
+            self.image_paths = glob(f"{root}/{folder}/*/*")
+            Training.save_data(self.image_paths, save_path)
+
+        self.image_paths = Training.load_data(save_path)
+        self.image_paths = self.image_paths[offset:(offset+subset_len)]
         # Get the labels from the image paths
         if model_name == 'dias_model':
             self.labels = [x.split("_")[-1][:-4] for x in self.image_paths]
@@ -43,6 +55,7 @@ class customImageFolderDataset(Dataset):
         # Create a dictionary mapping each label to a index from 0 to len(classes).
         self.label_to_idx = {x: i for i, x in enumerate(set(self.labels))}
         self.transform = transform
+        self.subset_len = subset_len
 
     def __len__(self):
         # return length of dataset
@@ -50,6 +63,7 @@ class customImageFolderDataset(Dataset):
 
     def __getitem__(self, idx):
         # open and send one image and label
+        assert(self.subset_len > idx >= 0)
         img_name = self.image_paths[idx]
         label = float(self.labels[idx])
         image = Image.open(img_name)
@@ -131,14 +145,25 @@ def split_data(data_path):
     return train_list, validation_list, test_list
 
 
-def get_dataset(data_path, model_name, folder):
+def get_dataset(data_path, model_name, folder, offset):
     t = transforms.Compose([transforms.Resize(size=110),
                             transforms.CenterCrop(size=110),
                             transforms.Grayscale(),
                             transforms.ToTensor()])
     dir = f"{data_path}/{folder}"
-    print(f"{folder} Dataset")
-    dataset = customImageFolderDataset(root=dir, transform=t, model_name=model_name)
+    print(f"{folder} Dataset. Load Path: {dir}")
+    max_samples = total_samples
+    new_offset = offset
+    if folder == "Train":
+        max_samples = int(total_samples * 0.6)
+        new_offset = int(offset * 0.6)
+    else:
+        max_samples = int(total_samples * 0.2) + int(offset * 0.2)
+        new_offset = 0
+
+    print(f"New samples: {max_samples}, Offset: {new_offset}")
+    dataset = CustomImageFolderDataset(root=data_path, folder=folder, transform=t, model_name=model_name,
+                                       subset_len=max_samples, offset=new_offset)
     print("Num Images in Dataset:", len(dataset))
     print("Example Image and Label:", dataset[2])
     data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=16, pin_memory=True)
@@ -156,12 +181,15 @@ def print_batch_size(data_loader):
 
 
 def check_images(img_name):
+    print(img_name)
     image = Image.open(img_name)
     image = t(image)
 
 
 def main():
     """Paths"""
+    # data_path = '/media/tuvalgelvan@staff.technion.ac.il/hd-21/Estimated-Blood-Presure-Project/Blood-Pressure' \
+    #             '-Estimation-with-a-Smartwatch/Data'
     # data_path = '../../Test_Data'
     data_path = '../../Data'
 
@@ -184,8 +212,8 @@ def main():
 
     """Debug to find images with errors"""
     image_paths = glob(f"{data_path}/Train/*/*")
-    start_idx = int((len(image_paths)/100)*39)
-    image_paths = image_paths[start_idx:]
+    start_idx = int((len(image_paths)/100)*56)
+    image_paths = image_paths[(start_idx+106490):]
     pool = Pool()
     for _ in tqdm.tqdm(pool.imap(func=check_images, iterable=image_paths), total=len(image_paths)):
         pass
