@@ -1,28 +1,23 @@
 import os
-import cv2
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-import torch
-import torch.nn as nn
-import torchvision
 import tqdm
-from torch.autograd import Variable
 from torchvision import datasets, models, transforms
 from multiprocessing import Pool, Lock
 from glob import glob
 from PIL import Image
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
 import shutil
 import sys
+from torch import Tensor
+from typing import Tuple, Iterator
 sys.path.append(os.path.abspath(os.path.join('..', 'Training.py')))
 import Training
 
-batch_size = 32
-total_samples = 100000
-t = transforms.Compose([transforms.Resize(size=110),
-                        transforms.CenterCrop(size=110),
-                        transforms.Grayscale(),
+batch_size = 64
+total_samples = 2500000
+t = transforms.Compose([transforms.Grayscale(),
+                        transforms.Normalize(mean=[0], std=[1],),
                         transforms.ToTensor()])
 
 
@@ -157,16 +152,20 @@ def get_dataset(data_path, model_name, folder, offset):
     if folder == "Train":
         max_samples = int(total_samples * 0.6)
         new_offset = int(offset * 0.6)
+    # elif folder == "Validation":
+    #     max_samples = int(total_samples * 0.2)
+    #     new_offset = int(offset * 0.2)
     else:
-        max_samples = int(total_samples * 0.2) + int(offset * 0.2)
-        new_offset = 0
+        max_samples = int(total_samples * 0.2)
+        new_offset = int(offset * 0.2)
 
     print(f"New samples: {max_samples}, Offset: {new_offset}")
     dataset = CustomImageFolderDataset(root=data_path, folder=folder, transform=t, model_name=model_name,
                                        subset_len=max_samples, offset=new_offset)
     print("Num Images in Dataset:", len(dataset))
     print("Example Image and Label:", dataset[2])
-    data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=16, pin_memory=True)
+    sampler = SubsetRandomSampler(list(range(len(dataset))))
+    data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, sampler=sampler)
     for image_batch, label_batch in data_loader:
         print("Image and Label Batch Size:", image_batch.size(), label_batch.size())
         break

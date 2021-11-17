@@ -8,6 +8,8 @@ import torch.nn as nn
 import torchvision
 import tqdm
 import time
+
+from torch.autograd import Variable
 from torchvision import datasets, models, transforms
 from datetime import datetime
 import sys, os
@@ -21,7 +23,7 @@ import ResNet
 plt.rcParams['figure.figsize'] = (8.0, 8.0)  # Set default plot's sizes
 plt.rcParams['axes.grid'] = True  # Show grid by default in figures
 print_every = 1
-max_epochs_stop = 40
+max_epochs_stop = 30
 
 
 # Reference - 'https://towardsdatascience.com/end-to-end-pipeline-for-setting-up-multiclass-image-classification-for
@@ -32,13 +34,17 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
     epochs_no_improve = 0
     valid_loss_min = np.Inf
 
+    valid_loss_path = f"../../Variables/{model_name}_valid_loss"
+    # if os.path.exists(valid_loss_path):
+    #     valid_loss_min, best_epoch = load_data(valid_loss_path)
+
     # Prepare lists to store intermediate objectives
-    lists_path = f"../../Variables/objective_lists"
-    if not os.path.exists(lists_path):
-        train_objective_list = [np.inf]
-        val_objective_list = [np.inf]
-    else:
-        val_objective_list, train_objective_list = load_data(lists_path)
+    train_objective_list = [np.inf]
+    val_objective_list = [np.inf]
+
+    lists_path = f"../../Variables/{model_name}_objective_lists"
+    # if os.path.exists(lists_path):
+    #     val_objective_list, train_objective_list = load_data(lists_path)
 
     # Initial Parameters
     overall_start = time.time()
@@ -76,7 +82,10 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
                 continue
 
             # Tensors to gpu
-            data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
+            if torch.cuda.is_available():
+                data, target = Variable(data.cuda()), Variable(target.cuda())
+            else:
+                data, target = Variable(data), Variable(target)
 
             # Clear gradients
             optimizer.zero_grad()
@@ -112,7 +121,10 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
                         continue
 
                     # Tensors to gpu
-                    data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
+                    if torch.cuda.is_available():
+                        data, target = Variable(data.cuda()), Variable(target.cuda())
+                    else:
+                        data, target = Variable(data), Variable(target)
 
                     # Forward pass
                     output = np.squeeze(model(data))
@@ -145,6 +157,8 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
                     epochs_no_improve = 0
                     valid_loss_min = valid_loss
                     best_epoch = epoch
+                    save_data((valid_loss_min, best_epoch), valid_loss_path)
+
 
                 # Otherwise increment count of epochs with no improvement
                 else:
@@ -192,7 +206,7 @@ def fine_tuning(model, train_loader, val_loader, model_name, save_file_name):
 
 
 def train_model(model, train_loader, val_loader, model_name, save_file_name):
-    learning_rate = 0.001
+    learning_rate = 0.005
     n_epochs = 200
 
     train_objective_list, val_objective_list = train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, save_file_name)
@@ -223,7 +237,10 @@ def calculate_test_score(model, test_loader, model_name):
         # Test loop
         for x, y in test_loader:
             # Tensors to gpu
-            x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
+            if torch.cuda.is_available():
+                data, target = Variable(data.cuda()), Variable(target.cuda())
+            else:
+                data, target = Variable(data), Variable(target)
 
             y_hat = np.squeeze(model(x))
             error = ((y_hat - y).abs()).sum().cpu()
@@ -320,7 +337,7 @@ def main():
     # val_loader = LoadData.get_dataset(data_path, 'sys_model', 'Validation')
     # fine_tuning(model, train_loader, val_loader, 'sys_model', save_file_name)
 
-    offset = 200000
+    offset = 0
 
     while offset < 10000000:
 
@@ -336,32 +353,40 @@ def main():
         train_model(model, train_loader, val_loader, model_name, save_file_name)
 
         print("****** Train Sys Model ******")
+        model = ResNet.create_resnet_model().to(device)
         model_name = 'sys_model'
         save_file_name = f'../../Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
         if os.path.exists(save_file_name):
             # Load the best state dict
             model.load_state_dict(torch.load(save_file_name))
-        model = ResNet.create_resnet_model().to(device)
         train_loader = LoadData.get_dataset(data_path, model_name, 'Train', offset)
         val_loader = LoadData.get_dataset(data_path, model_name, 'Validation', offset)
         train_model(model, train_loader, val_loader, model_name, save_file_name)
 
-        offset += 100000
+        print("****** Check Test Score *******")
+        """Load Dias Model"""
+        model = ResNet.create_resnet_model().to(device)
+        model_name = 'dias_model'
+        save_file_name = f'../../Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
+        if os.path.exists(save_file_name):
+            # Load the best state dict
+            print(f"Load Model: {save_file_name}")
+            model.load_state_dict(torch.load(save_file_name))
+        test_loader = LoadData.get_dataset(data_path, model_name, 'Test', offset)
+        calculate_test_score(model, test_loader, model_name)
 
-    # print("****** Check Test Score *******")
-    # """Load Dias Model"""
-    # model_name = 'dias_model'
-    # save_file_name = f'{model_path}/{model_name}.pt'
-    # model.load_state_dict(torch.load(save_file_name)).to(device)
-    # test_loader = LoadData.get_dataset(data_path, 'dias_model', 'Test')
-    # calculate_test_score(model, test_loader, model_name)
-    #
-    # """Load Sys Model"""
-    # model_name = 'sys_model'
-    # save_file_name = f'{model_path}/{model_name}.pt'
-    # model.load_state_dict(torch.load(save_file_name)).to(device)
-    # test_loader = LoadData.get_dataset(data_path, 'dias_model', 'Test')
-    # calculate_test_score(model, test_loader, model_name)
+        """Load Sys Model"""
+        model = ResNet.create_resnet_model().to(device)
+        model_name = 'sys_model'
+        save_file_name = f'../../Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
+        if os.path.exists(save_file_name):
+            # Load the best state dict
+            print(f"Load Model: {save_file_name}")
+            model.load_state_dict(torch.load(save_file_name))
+        test_loader = LoadData.get_dataset(data_path, model_name, 'Test', offset)
+        calculate_test_score(model, test_loader, model_name)
+
+        offset += LoadData.total_samples
 
 
 if __name__ == "__main__":
