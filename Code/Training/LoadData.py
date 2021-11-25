@@ -1,6 +1,8 @@
 import os
+import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import torch
 import tqdm
 from torchvision import datasets, models, transforms
 from multiprocessing import Pool, Lock
@@ -9,16 +11,12 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
 import shutil
 import sys
-from torch import Tensor
-from typing import Tuple, Iterator
+import time
 sys.path.append(os.path.abspath(os.path.join('..', 'Training.py')))
 import Training
 
-batch_size = 64
+batch_size = 128
 total_samples = 2500000
-t = transforms.Compose([transforms.Grayscale(),
-                        transforms.Normalize(mean=[0], std=[1],),
-                        transforms.ToTensor()])
 
 
 class CustomImageFolderDataset(Dataset):
@@ -61,11 +59,11 @@ class CustomImageFolderDataset(Dataset):
         assert(self.subset_len > idx >= 0)
         img_name = self.image_paths[idx]
         label = float(self.labels[idx])
+        # start = time.time()
         image = Image.open(img_name)
-        if not image:
-            return None, None
         if self.transform:
             image = self.transform(image)
+        # print("open image time:", time.time() - start)
         return image, label
 
 
@@ -141,8 +139,7 @@ def split_data(data_path):
 
 
 def get_dataset(data_path, model_name, folder, offset):
-    t = transforms.Compose([transforms.Resize(size=110),
-                            transforms.CenterCrop(size=110),
+    t = transforms.Compose([transforms.Resize((110, 110)),
                             transforms.Grayscale(),
                             transforms.ToTensor()])
     dir = f"{data_path}/{folder}"
@@ -165,7 +162,7 @@ def get_dataset(data_path, model_name, folder, offset):
     print("Num Images in Dataset:", len(dataset))
     print("Example Image and Label:", dataset[2])
     sampler = SubsetRandomSampler(list(range(len(dataset))))
-    data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, sampler=sampler)
+    data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, sampler=sampler, pin_memory=True)
     for image_batch, label_batch in data_loader:
         print("Image and Label Batch Size:", image_batch.size(), label_batch.size())
         break

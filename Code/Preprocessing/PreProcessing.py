@@ -1,6 +1,7 @@
 import pickle
 import posixpath
 
+import h5py
 import numpy as np
 import pandas as pd
 import os
@@ -23,7 +24,7 @@ from scipy import signal
 from scipy.fft import fftshift
 from multiprocessing import Pool, Lock
 
-squered_magnitude_threshold = 200
+squared_magnitude_threshold = 300
 window_in_sec = 30
 frequency_end = 12
 frequency_start = 0
@@ -207,7 +208,7 @@ def ppg_filter(samples):
     for sample in samples:
         ppg_signal = sample.window.p_signal[:, sample.ppg_index]
         sample.squared_magnitude_ppg = squared_magnitude_ppg_detection(ppg_signal)
-        if sample.squared_magnitude_ppg > squered_magnitude_threshold:
+        if sample.squared_magnitude_ppg > squared_magnitude_threshold:
             filtered_samples.append(sample)
 
     return filtered_samples
