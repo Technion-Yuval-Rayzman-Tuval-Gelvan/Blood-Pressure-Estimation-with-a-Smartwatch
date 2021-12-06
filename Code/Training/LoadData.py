@@ -178,6 +178,9 @@ def print_batch_size(data_loader):
 
 def check_images(img_name):
     print(img_name)
+    t = transforms.Compose([transforms.Resize((110, 110)),
+                            transforms.Grayscale(),
+                            transforms.ToTensor()])
     image = Image.open(img_name)
     image = t(image)
 
@@ -207,12 +210,25 @@ def main():
     # print_some_images(dias_train_loader)
 
     """Debug to find images with errors"""
-    image_paths = glob(f"{data_path}/Train/*/*")
-    start_idx = int((len(image_paths)/100)*56)
-    image_paths = image_paths[(start_idx+106490):]
+    # image_paths = glob(f"{data_path}/Validation/*/*")
+    # # start_idx = int((len(image_paths)/100)*56)
+    # image_paths = image_paths[(2411741+632177):]
+    # pool = Pool()
+    # for _ in tqdm.tqdm(pool.imap(func=check_images, iterable=image_paths), total=len(image_paths)):
+    #     pass
+
+    # for image in image_paths:
+    #     check_images(image)
+
+    image_paths = glob(f"{data_path}/Test/*/*")
+    start_idx = int((len(image_paths) / 100) * 56)
+    image_paths = image_paths[(1063270+1211404):]
     pool = Pool()
     for _ in tqdm.tqdm(pool.imap(func=check_images, iterable=image_paths), total=len(image_paths)):
         pass
+
+    # for image in image_paths:
+    #     check_images(image)
 
 
 if __name__ == "__main__":

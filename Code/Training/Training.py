@@ -15,15 +15,18 @@ from datetime import datetime
 import sys, os
 sys.path.append(os.path.abspath(os.path.join('..', 'LoadData')))
 sys.path.append(os.path.abspath(os.path.join('..', 'ResNet')))
+sys.path.append(os.path.abspath(os.path.join('..', 'HDF5DataLoader')))
 # Now do your import
 import LoadData
 import ResNet
+import HDF5DataLoader
 
 # Set some default values of the the matplotlib plots
 plt.rcParams['figure.figsize'] = (8.0, 8.0)  # Set default plot's sizes
 plt.rcParams['axes.grid'] = True  # Show grid by default in figures
 print_every = 1
 max_epochs_stop = 30
+HDF5 = True
 
 
 # Reference - 'https://towardsdatascience.com/end-to-end-pipeline-for-setting-up-multiclass-image-classification-for
@@ -337,56 +340,62 @@ def main():
     # val_loader = LoadData.get_dataset(data_path, 'sys_model', 'Validation')
     # fine_tuning(model, train_loader, val_loader, 'sys_model', save_file_name)
 
-    offset = 0
+    # offset = 0
+    #
+    # while offset < 10000000:
 
-    while offset < 10000000:
+    print("****** Train Dias Model ******")
+    model = ResNet.create_resnet_model().to(device)
+    model_name = 'dias_model'
+    save_file_name = f'../../Models/HDF5_Models/{model_name}_batch_{LoadData.batch_size}.pt'
+    if os.path.exists(save_file_name):
+        # Load the best state dict
+        model.load_state_dict(torch.load(save_file_name))
+    # train_loader = LoadData.get_dataset(data_path, model_name, 'Train', offset)
+    # val_loader = LoadData.get_dataset(data_path, model_name, 'Validation', offset)
+    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
+    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
+    train_model(model, train_loader, val_loader, model_name, save_file_name)
 
-        print("****** Train Dias Model ******")
-        model = ResNet.create_resnet_model().to(device)
-        model_name = 'dias_model'
-        save_file_name = f'../../Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
-        if os.path.exists(save_file_name):
-            # Load the best state dict
-            model.load_state_dict(torch.load(save_file_name))
-        train_loader = LoadData.get_dataset(data_path, model_name, 'Train', offset)
-        val_loader = LoadData.get_dataset(data_path, model_name, 'Validation', offset)
-        train_model(model, train_loader, val_loader, model_name, save_file_name)
+    print("****** Train Sys Model ******")
+    model = ResNet.create_resnet_model().to(device)
+    model_name = 'sys_model'
+    save_file_name = f'../../Models/HDF5_Models/{model_name}_batch_{LoadData.batch_size}.pt'
+    if os.path.exists(save_file_name):
+        # Load the best state dict
+        model.load_state_dict(torch.load(save_file_name))
+    # train_loader = LoadData.get_dataset(data_path, model_name, 'Train', offset)
+    # val_loader = LoadData.get_dataset(data_path, model_name, 'Validation', offset)
+    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
+    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
+    train_model(model, train_loader, val_loader, model_name, save_file_name)
 
-        print("****** Train Sys Model ******")
-        model = ResNet.create_resnet_model().to(device)
-        model_name = 'sys_model'
-        save_file_name = f'../../Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
-        if os.path.exists(save_file_name):
-            # Load the best state dict
-            model.load_state_dict(torch.load(save_file_name))
-        train_loader = LoadData.get_dataset(data_path, model_name, 'Train', offset)
-        val_loader = LoadData.get_dataset(data_path, model_name, 'Validation', offset)
-        train_model(model, train_loader, val_loader, model_name, save_file_name)
+    print("****** Check Test Score *******")
+    """Load Dias Model"""
+    model = ResNet.create_resnet_model().to(device)
+    model_name = 'dias_model'
+    save_file_name = f'../../Models/HDF5_Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
+    if os.path.exists(save_file_name):
+        # Load the best state dict
+        print(f"Load Model: {save_file_name}")
+        model.load_state_dict(torch.load(save_file_name))
+    # test_loader = LoadData.get_dataset(data_path, model_name, 'Test', offset)
+    test_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Test')
+    calculate_test_score(model, test_loader, model_name)
 
-        print("****** Check Test Score *******")
-        """Load Dias Model"""
-        model = ResNet.create_resnet_model().to(device)
-        model_name = 'dias_model'
-        save_file_name = f'../../Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
-        if os.path.exists(save_file_name):
-            # Load the best state dict
-            print(f"Load Model: {save_file_name}")
-            model.load_state_dict(torch.load(save_file_name))
-        test_loader = LoadData.get_dataset(data_path, model_name, 'Test', offset)
-        calculate_test_score(model, test_loader, model_name)
+    """Load Sys Model"""
+    model = ResNet.create_resnet_model().to(device)
+    model_name = 'sys_model'
+    save_file_name = f'../../Models/HDF5_Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
+    if os.path.exists(save_file_name):
+        # Load the best state dict
+        print(f"Load Model: {save_file_name}")
+        model.load_state_dict(torch.load(save_file_name))
+    # test_loader = LoadData.get_dataset(data_path, model_name, 'Test', offset)
+    test_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Test')
+    calculate_test_score(model, test_loader, model_name)
 
-        """Load Sys Model"""
-        model = ResNet.create_resnet_model().to(device)
-        model_name = 'sys_model'
-        save_file_name = f'../../Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
-        if os.path.exists(save_file_name):
-            # Load the best state dict
-            print(f"Load Model: {save_file_name}")
-            model.load_state_dict(torch.load(save_file_name))
-        test_loader = LoadData.get_dataset(data_path, model_name, 'Test', offset)
-        calculate_test_score(model, test_loader, model_name)
-
-        offset += LoadData.total_samples
+        # offset += LoadData.total_samples
 
 
 if __name__ == "__main__":
