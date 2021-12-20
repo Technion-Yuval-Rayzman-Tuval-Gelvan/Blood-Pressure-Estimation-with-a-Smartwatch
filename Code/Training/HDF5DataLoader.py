@@ -19,14 +19,14 @@ import torchvision.transforms as transforms
 # https://github.com/fab-jul/hdf5_dataloader
 
 
-def get_hdf5_dataset (data_path, model_name, folder):
+def get_hdf5_dataset (data_path, model_name, folder, max_chuncks):
     # create transform
     # Note: cannot use default PyTorch ops, because they expect PIL Images
     transform_hdf5 = transforms.Compose([ArrayToTensor()])
 
     # create dataset
     all_file_ps = glob.glob(f'{data_path}/{folder}_HDF5/*.hdf5')
-    ds = HDF5Dataset(all_file_ps, transform=transform_hdf5, model_name=model_name)
+    ds = HDF5Dataset(all_file_ps, transform=transform_hdf5, model_name=model_name, max_chuncks=max_chuncks)
 
     # using the standard PyTorch DataLoader
     dl = DataLoader(ds, batch_size=64, num_workers=8)

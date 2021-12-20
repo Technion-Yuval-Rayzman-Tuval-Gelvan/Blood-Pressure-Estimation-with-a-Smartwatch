@@ -15,7 +15,7 @@ import time
 sys.path.append(os.path.abspath(os.path.join('..', 'Training.py')))
 import Training
 
-batch_size = 128
+batch_size = 64
 total_samples = 2500000
 
 

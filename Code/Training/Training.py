@@ -25,7 +25,7 @@ import HDF5DataLoader
 plt.rcParams['figure.figsize'] = (8.0, 8.0)  # Set default plot's sizes
 plt.rcParams['axes.grid'] = True  # Show grid by default in figures
 print_every = 1
-max_epochs_stop = 30
+max_epochs_stop = 10
 HDF5 = True
 
 
@@ -73,8 +73,8 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
         start = time.time()
 
         # keep track of training and validation loss each epoch
-        train_loss = 0.0
-        valid_loss = 0.0
+        train_loss = []
+        valid_loss = []
         train_loss_items = 0
         valid_loss_items = 0
 
@@ -102,7 +102,7 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
             # Update the parameters
             optimizer.step()
 
-            train_loss += loss.item()
+            train_loss += [loss.item()]
             train_loss_items += 1
 
             # Track training progress
@@ -135,30 +135,29 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
                     # Validation loss
                     loss = criterion(output, target)
 
-                    valid_loss += loss.item()
+                    valid_loss += [loss.item()]
                     valid_loss_items += 1
 
-                # Calculate average losses
-                train_loss = train_loss / train_loss_items
-                valid_loss = valid_loss / valid_loss_items
-
                 # Save validation loss
-                val_objective_list.append(valid_loss)
-                train_objective_list.append(train_loss)
+                val_objective_list += valid_loss
+                train_objective_list += train_loss
+
+                average_train_loss = np.sum(train_loss)/train_loss_items
+                average_valid_loss = np.sum(valid_loss) / valid_loss_items
                 
                 # Print training and validation results
                 if (epoch + 1) % print_every == 0:
-                    print(f'\nEpoch: {epoch} \tTraining Loss: {train_loss:.4f} \tValidation Loss: {valid_loss:.4f}')
+                    print(f'\nEpoch: {epoch} \tTraining Loss: {average_train_loss:.4f} \tValidation Loss: {average_valid_loss:.4f}')
 
                 # Save the model if validation loss decreases
-                if valid_loss < valid_loss_min:
+                if np.min(valid_loss) < valid_loss_min:
                     # Save model
-                    print(f"Save better model. last valid loss: {valid_loss_min}. new valid loss: {valid_loss}")
+                    print(f"Save better model. last valid loss: {valid_loss_min}. new valid loss: {np.min(valid_loss)}")
                     torch.save(model.state_dict(), save_file_name)
                     save_data((val_objective_list, train_objective_list), lists_path)
                     # Track improvement
                     epochs_no_improve = 0
-                    valid_loss_min = valid_loss
+                    valid_loss_min = np.min(valid_loss)
                     best_epoch = epoch
                     save_data((valid_loss_min, best_epoch), valid_loss_path)
 
@@ -183,12 +182,13 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
 
 
 def fine_tuning(model, train_loader, val_loader, model_name, save_file_name):
-    n_epochs = 200
+    n_epochs = 20
     etas_list = [3e-3, 1e-3, 3e-2, 1e-2]
 
     fig, axes = plt.subplots(2, 2, figsize=(6, 6))
     for i_eta, eta in enumerate(etas_list):
         model_copy = copy.deepcopy(model)
+        print("Learning rate:", eta)
         train_objective_list, val_objective_list = train(model_copy, eta, n_epochs, train_loader,
                                                          val_loader, model_name, save_file_name)
 
@@ -209,7 +209,7 @@ def fine_tuning(model, train_loader, val_loader, model_name, save_file_name):
 
 
 def train_model(model, train_loader, val_loader, model_name, save_file_name):
-    learning_rate = 0.005
+    learning_rate = 0.001
     n_epochs = 200
 
     train_objective_list, val_objective_list = train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, save_file_name)
@@ -241,9 +241,9 @@ def calculate_test_score(model, test_loader, model_name):
         for x, y in test_loader:
             # Tensors to gpu
             if torch.cuda.is_available():
-                data, target = Variable(data.cuda()), Variable(target.cuda())
+                x, y = Variable(x.cuda()), Variable(y.cuda())
             else:
-                data, target = Variable(data), Variable(target)
+                x, y = Variable(x), Variable(y)
 
             y_hat = np.squeeze(model(x))
             error = ((y_hat - y).abs()).sum().cpu()
@@ -298,6 +298,8 @@ def main():
     data_path = '../../Data'
     model_path = '../../Models'
 
+    date = datetime.now()
+
     """Create Model"""
     # model = ResNet.create_resnet_model()
     # save_model(f'{model_path}/dias_model', model)
@@ -325,7 +327,18 @@ def main():
     # print("Check Sys Model")
     # sys_model, _, _= train_model(model, learning_rate, train_loader, val_loader, n_epochs, 'sys_model', save_file_name)
 
-    """Fine Tuning"""
+    print("****** Fine Tuning Dias Model ******")
+    model = ResNet.create_resnet_model().to(device)
+    model_name = 'dias_model'
+    save_file_name = f'../../Models/HDF5_Models/fine_tuning_{date}_{model_name}.pt'
+    if os.path.exists(save_file_name):
+        # Load the best state dict
+        model.load_state_dict(torch.load(save_file_name))
+
+    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', 6)
+    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', 2)
+    fine_tuning(model, train_loader, val_loader, model_name, save_file_name)
+
     # model = ResNet.create_resnet_model().to(device)
     # model_name = 'dias_model'
     # save_file_name = f'../../Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
@@ -340,62 +353,54 @@ def main():
     # val_loader = LoadData.get_dataset(data_path, 'sys_model', 'Validation')
     # fine_tuning(model, train_loader, val_loader, 'sys_model', save_file_name)
 
-    # offset = 0
-    #
-    # while offset < 10000000:
-
     print("****** Train Dias Model ******")
     model = ResNet.create_resnet_model().to(device)
     model_name = 'dias_model'
-    save_file_name = f'../../Models/HDF5_Models/{model_name}_batch_{LoadData.batch_size}.pt'
+    save_file_name = f'../../Models/HDF5_Models/{date}_{model_name}.pt'
     if os.path.exists(save_file_name):
         # Load the best state dict
         model.load_state_dict(torch.load(save_file_name))
-    # train_loader = LoadData.get_dataset(data_path, model_name, 'Train', offset)
-    # val_loader = LoadData.get_dataset(data_path, model_name, 'Validation', offset)
-    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
-    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
+
+    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', 6)
+    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', 2)
     train_model(model, train_loader, val_loader, model_name, save_file_name)
 
     print("****** Train Sys Model ******")
     model = ResNet.create_resnet_model().to(device)
     model_name = 'sys_model'
-    save_file_name = f'../../Models/HDF5_Models/{model_name}_batch_{LoadData.batch_size}.pt'
+    save_file_name = f'../../Models/HDF5_Models/{date}_{model_name}.pt'
     if os.path.exists(save_file_name):
         # Load the best state dict
         model.load_state_dict(torch.load(save_file_name))
-    # train_loader = LoadData.get_dataset(data_path, model_name, 'Train', offset)
-    # val_loader = LoadData.get_dataset(data_path, model_name, 'Validation', offset)
-    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
-    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
+
+    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', 6)
+    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', 2)
     train_model(model, train_loader, val_loader, model_name, save_file_name)
 
     print("****** Check Test Score *******")
     """Load Dias Model"""
     model = ResNet.create_resnet_model().to(device)
     model_name = 'dias_model'
-    save_file_name = f'../../Models/HDF5_Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
+    save_file_name = f'../../Models/HDF5_Models/{date}_{model_name}.pt'
     if os.path.exists(save_file_name):
         # Load the best state dict
         print(f"Load Model: {save_file_name}")
         model.load_state_dict(torch.load(save_file_name))
-    # test_loader = LoadData.get_dataset(data_path, model_name, 'Test', offset)
-    test_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Test')
+
+    test_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Test', 2)
     calculate_test_score(model, test_loader, model_name)
 
     """Load Sys Model"""
     model = ResNet.create_resnet_model().to(device)
     model_name = 'sys_model'
-    save_file_name = f'../../Models/HDF5_Models/{model_name}_batch_{LoadData.batch_size}_samples_{LoadData.total_samples}.pt'
+    save_file_name = f'../../Models/HDF5_Models/{date}_{model_name}.pt'
     if os.path.exists(save_file_name):
         # Load the best state dict
         print(f"Load Model: {save_file_name}")
         model.load_state_dict(torch.load(save_file_name))
-    # test_loader = LoadData.get_dataset(data_path, model_name, 'Test', offset)
-    test_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Test')
-    calculate_test_score(model, test_loader, model_name)
 
-        # offset += LoadData.total_samples
+    test_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Test', 2)
+    calculate_test_score(model, test_loader, model_name)
 
 
 if __name__ == "__main__":
