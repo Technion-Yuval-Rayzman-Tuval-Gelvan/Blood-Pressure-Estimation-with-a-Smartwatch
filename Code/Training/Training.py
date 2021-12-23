@@ -25,7 +25,7 @@ import HDF5DataLoader
 plt.rcParams['figure.figsize'] = (8.0, 8.0)  # Set default plot's sizes
 plt.rcParams['axes.grid'] = True  # Show grid by default in figures
 print_every = 1
-max_epochs_stop = 10
+max_epochs_stop = 2
 HDF5 = True
 
 
@@ -37,17 +37,19 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
     epochs_no_improve = 0
     valid_loss_min = np.Inf
 
-    valid_loss_path = f"../../Variables/{model_name}_valid_loss"
-    # if os.path.exists(valid_loss_path):
-    #     valid_loss_min, best_epoch = load_data(valid_loss_path)
+    valid_loss_path = f"../../Variables/{model_name}_valid_loss_2"
+    if os.path.exists(valid_loss_path):
+        print("Load loss:", valid_loss_path)
+        valid_loss_min, best_epoch = load_data(valid_loss_path)
 
     # Prepare lists to store intermediate objectives
     train_objective_list = [np.inf]
     val_objective_list = [np.inf]
 
-    lists_path = f"../../Variables/{model_name}_objective_lists"
-    # if os.path.exists(lists_path):
-    #     val_objective_list, train_objective_list = load_data(lists_path)
+    lists_path = f"../../Variables/{model_name}_objective_lists_2"
+    if os.path.exists(lists_path):
+        print("Load lists:", lists_path)
+        val_objective_list, train_objective_list = load_data(lists_path)
 
     # Initial Parameters
     overall_start = time.time()
@@ -102,6 +104,8 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
             # Update the parameters
             optimizer.step()
 
+            train_objective_list += [loss.item()]
+
             train_loss += [loss.item()]
             train_loss_items += 1
 
@@ -135,32 +139,30 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
                     # Validation loss
                     loss = criterion(output, target)
 
+                    val_objective_list += [loss.item()]
+
                     valid_loss += [loss.item()]
                     valid_loss_items += 1
 
-                # Save validation loss
-                val_objective_list += valid_loss
-                train_objective_list += train_loss
-
-                average_train_loss = np.sum(train_loss)/train_loss_items
-                average_valid_loss = np.sum(valid_loss) / valid_loss_items
+                # Calculate average losses
+                average_train_loss = np.sum(train_loss) / len(train_loss)
+                average_valid_loss = np.sum(valid_loss) / len(valid_loss)
                 
                 # Print training and validation results
                 if (epoch + 1) % print_every == 0:
-                    print(f'\nEpoch: {epoch} \tTraining Loss: {average_train_loss:.4f} \tValidation Loss: {average_valid_loss:.4f}')
+                    print(f'\nEpoch: {epoch} \tTraining Loss: {np.min(train_loss):.4f} \tValidation Loss: {np.min(valid_loss):.4f}')
 
                 # Save the model if validation loss decreases
                 if np.min(valid_loss) < valid_loss_min:
                     # Save model
                     print(f"Save better model. last valid loss: {valid_loss_min}. new valid loss: {np.min(valid_loss)}")
-                    torch.save(model.state_dict(), save_file_name)
-                    save_data((val_objective_list, train_objective_list), lists_path)
+                    torch.save(model.state_dict(), f'{np.min(valid_loss)}_{save_file_name}')
+                    save_data((val_objective_list, train_objective_list), f'{np.min(valid_loss)}_{lists_path}')
                     # Track improvement
                     epochs_no_improve = 0
                     valid_loss_min = np.min(valid_loss)
                     best_epoch = epoch
-                    save_data((valid_loss_min, best_epoch), valid_loss_path)
-
+                    save_data((valid_loss_min, best_epoch), f'{np.min(valid_loss)}_{valid_loss_path}')
 
                 # Otherwise increment count of epochs with no improvement
                 else:
@@ -183,7 +185,7 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
 
 def fine_tuning(model, train_loader, val_loader, model_name, save_file_name):
     n_epochs = 20
-    etas_list = [3e-3, 1e-3, 3e-2, 1e-2]
+    etas_list = [5e-3, 1e-3, 1e-2, 1e-1]
 
     fig, axes = plt.subplots(2, 2, figsize=(6, 6))
     for i_eta, eta in enumerate(etas_list):
@@ -195,7 +197,7 @@ def fine_tuning(model, train_loader, val_loader, model_name, save_file_name):
         # Plot
         ax = axes.flat[i_eta]
         ax.plot(np.arange(len(train_objective_list)), train_objective_list, label='Train')
-        ax.plot(np.arange(len(val_objective_list)), val_objective_list, label='Validation')
+        ax.plot(np.arange(len(train_objective_list)), val_objective_list, label='Validation')
         ax.set_title(r'$\eta={' + f'{eta:g}' + r'}$')
         ax.set_xlabel('Step')
         ax.set_ylabel('Objective')
@@ -209,17 +211,20 @@ def fine_tuning(model, train_loader, val_loader, model_name, save_file_name):
 
 
 def train_model(model, train_loader, val_loader, model_name, save_file_name):
-    learning_rate = 0.001
+    learning_rate = 0.005
     n_epochs = 200
 
     train_objective_list, val_objective_list = train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, save_file_name)
 
+    plot_results(train_objective_list, val_objective_list, model_name)
+
+
+def plot_results(train_objective_list, val_objective_list, model_name):
     # Plot
     fig, ax = plt.subplots(figsize=(5, 5))
     ax.plot(np.arange(len(train_objective_list)), train_objective_list, label='Train')
     ax.plot(np.arange(len(val_objective_list)), val_objective_list, label='Validation')
-    ax.set_title(r'$learning_rate={' + f'{learning_rate:g}' + r'}$')
-    ax.set_xlabel('Step')
+    ax.set_xlabel('Iterations')
     ax.set_ylabel('Objective')
 
     # dd/mm/YY H:M:S
@@ -327,17 +332,17 @@ def main():
     # print("Check Sys Model")
     # sys_model, _, _= train_model(model, learning_rate, train_loader, val_loader, n_epochs, 'sys_model', save_file_name)
 
-    print("****** Fine Tuning Dias Model ******")
-    model = ResNet.create_resnet_model().to(device)
-    model_name = 'dias_model'
-    save_file_name = f'../../Models/HDF5_Models/fine_tuning_{date}_{model_name}.pt'
-    if os.path.exists(save_file_name):
-        # Load the best state dict
-        model.load_state_dict(torch.load(save_file_name))
-
-    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', 6)
-    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', 2)
-    fine_tuning(model, train_loader, val_loader, model_name, save_file_name)
+    # print("****** Fine Tuning Dias Model ******")
+    # model = ResNet.create_resnet_model().to(device)
+    # model_name = 'dias_model'
+    # save_file_name = f'../../Models/HDF5_Models/fine_tuning_{date}_{model_name}.pt'
+    # if os.path.exists(save_file_name):
+    #     # Load the best state dict
+    #     model.load_state_dict(torch.load(save_file_name))
+    #
+    # train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', 6)
+    # val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', 2)
+    # fine_tuning(model, train_loader, val_loader, model_name, save_file_name)
 
     # model = ResNet.create_resnet_model().to(device)
     # model_name = 'dias_model'
@@ -356,51 +361,66 @@ def main():
     print("****** Train Dias Model ******")
     model = ResNet.create_resnet_model().to(device)
     model_name = 'dias_model'
-    save_file_name = f'../../Models/HDF5_Models/{date}_{model_name}.pt'
-    if os.path.exists(save_file_name):
+    # save_file_name = f'../../Models/HDF5_Models/{date}_{model_name}.pt'
+    dias_save_file_name = f'../../Models/HDF5_Models/2021-12-21_dias_model.pt'
+    if os.path.exists(dias_save_file_name):
         # Load the best state dict
-        model.load_state_dict(torch.load(save_file_name))
+        print("Load model:", dias_save_file_name)
+        model.load_state_dict(torch.load(dias_save_file_name))
 
-    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', 6)
-    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', 2)
-    train_model(model, train_loader, val_loader, model_name, save_file_name)
+    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
+    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
+    train_model(model, train_loader, val_loader, model_name, dias_save_file_name)
 
-    print("****** Train Sys Model ******")
-    model = ResNet.create_resnet_model().to(device)
+    # print("****** Train Sys Model ******")
+    # model = ResNet.create_resnet_model().to(device)
     model_name = 'sys_model'
-    save_file_name = f'../../Models/HDF5_Models/{date}_{model_name}.pt'
-    if os.path.exists(save_file_name):
-        # Load the best state dict
-        model.load_state_dict(torch.load(save_file_name))
+    sys_save_file_name = f'../../Models/HDF5_Models/2021-12-21_sys_model.pt'
+    # if os.path.exists(sys_save_file_name):
+    #     # Load the best state dict
+    #     model.load_state_dict(torch.load(sys_save_file_name))
+    #
+    # train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
+    # val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
+    # train_model(model, train_loader, val_loader, model_name, sys_save_file_name)
 
-    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', 6)
-    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', 2)
-    train_model(model, train_loader, val_loader, model_name, save_file_name)
+    # print("****** Check Test Score *******")
+    # """Load Dias Model"""
+    # model = ResNet.create_resnet_model().to(device)
+    # model_name = 'dias_model'
+    # if os.path.exists(dias_save_file_name):
+    #     # Load the best state dict
+    #     print(f"Load Model: {dias_save_file_name}")
+    #     model.load_state_dict(torch.load(dias_save_file_name))
+    #
+    # test_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Test')
+    # calculate_test_score(model, test_loader, model_name)
+    #
+    # """Load Sys Model"""
+    # model = ResNet.create_resnet_model().to(device)
+    # model_name = 'sys_model'
+    # if os.path.exists(sys_save_file_name):
+    #     # Load the best state dict
+    #     print(f"Load Model: {sys_save_file_name}")
+    #     model.load_state_dict(torch.load(sys_save_file_name))
+    #
+    # test_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Test')
+    # calculate_test_score(model, test_loader, model_name)
 
-    print("****** Check Test Score *******")
-    """Load Dias Model"""
-    model = ResNet.create_resnet_model().to(device)
+    print(""" Print Results""")
     model_name = 'dias_model'
-    save_file_name = f'../../Models/HDF5_Models/{date}_{model_name}.pt'
-    if os.path.exists(save_file_name):
-        # Load the best state dict
-        print(f"Load Model: {save_file_name}")
-        model.load_state_dict(torch.load(save_file_name))
+    lists_path = f"../../Variables/{model_name}_objective_lists"
+    if os.path.exists(lists_path):
+        print("Load lists:", lists_path)
+        val_objective_list, train_objective_list = load_data(lists_path)
+    plot_results(train_objective_list[:100], val_objective_list[:100], model_name)
 
-    test_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Test', 2)
-    calculate_test_score(model, test_loader, model_name)
-
-    """Load Sys Model"""
-    model = ResNet.create_resnet_model().to(device)
     model_name = 'sys_model'
-    save_file_name = f'../../Models/HDF5_Models/{date}_{model_name}.pt'
-    if os.path.exists(save_file_name):
-        # Load the best state dict
-        print(f"Load Model: {save_file_name}")
-        model.load_state_dict(torch.load(save_file_name))
-
-    test_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Test', 2)
-    calculate_test_score(model, test_loader, model_name)
+    lists_path = f"../../Variables/{model_name}_objective_lists"
+    if os.path.exists(lists_path):
+        print("Load lists:", lists_path)
+        val_objective_list, train_objective_list = load_data(lists_path)
+    plot_results(train_objective_list[:100], val_objective_list[:100], model_name)
 
 
 if __name__ == "__main__":

@@ -6,10 +6,13 @@ import torch.nn as nn
 import torchvision
 import tqdm
 import os
+import sys
 from torchvision import datasets, models, transforms
 from datetime import datetime
 # Set some default values of the the matplotlib plots
 from Code.Training import LoadData
+sys.path.append(os.path.abspath(os.path.join('..', 'HDF5DataLoader')))
+import HDF5DataLoader
 
 
 def load_bp_data(data_path, list_dir):
@@ -32,6 +35,18 @@ def load_bp_data(data_path, list_dir):
     return dias_bp_list, sys_bp_list
 
 
+def load_bp_data_loader(data_loader):
+
+    bp_list = []
+
+    for data, label in data_loader:
+        bp_list += label
+
+    print("done. len:", len(bp_list))
+
+    return bp_list
+
+
 def calculate_histogram(bp_list, bp_name):
     n, bins, patches = plt.hist(x=bp_list, bins='auto', alpha=0.7, rwidth=0.85)
     plt.grid(axis='y', alpha=0.75)
@@ -47,10 +62,23 @@ def calculate_histogram(bp_list, bp_name):
 def main():
     # data_path = '../../Test_Data'
     data_path = '../../Data'
-    dir_list = LoadData.get_dir_list(data_path)
-    dias_bp_list, sys_bp_list = load_bp_data(data_path, dir_list)
-    calculate_histogram(dias_bp_list, "Diastolic")
-    calculate_histogram(sys_bp_list, "Systolic")
+    # dir_list = LoadData.get_dir_list(data_path)
+    # dias_bp_list, sys_bp_list = load_bp_data(data_path, dir_list)
+    # calculate_histogram(dias_bp_list, "Diastolic")
+    # calculate_histogram(sys_bp_list, "Systolic")
+    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'dias_model', 'Train', 6)
+    train_dias_bp_list = load_bp_data_loader(train_loader)
+    calculate_histogram(train_dias_bp_list, "Train Diastolic")
+    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'dias_model', 'Validation', 2)
+    valid_dias_bp_list = load_bp_data_loader(val_loader)
+    calculate_histogram(valid_dias_bp_list, "Valid Diastolic")
+
+    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'sys_model', 'Train', 6)
+    train_sys_bp_list = load_bp_data_loader(train_loader)
+    calculate_histogram(train_sys_bp_list, "Train Systolic")
+    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'sys_model', 'Validation', 2)
+    valid_sys_bp_list = load_bp_data_loader(val_loader)
+    calculate_histogram(valid_sys_bp_list, "Valid Systolic")
 
 
 if __name__ == "__main__":
