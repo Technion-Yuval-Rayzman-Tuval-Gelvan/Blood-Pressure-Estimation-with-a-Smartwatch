@@ -10,10 +10,11 @@ import torch
 import torch.autograd as autograd
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
-from Code.Training import ResNet
+sys.path.append('../../Code/Training')
+import ResNet
 from typing import Any, Tuple, Callable, Optional, cast
-
-from Code.Training.TrainResult import FitResult, EpochResult, BatchResult
+sys.path.append('../../Code/Training/TrainResult.py')
+from TrainResult import FitResult, EpochResult, BatchResult
 
 
 class Trainer(abc.ABC):
@@ -89,11 +90,11 @@ class Trainer(abc.ABC):
             test_loss.extend(test_result.losses)
             test_acc.append(test_result.accuracy)
 
-            if self.scheduler is not None:
+            if self.scheduler is True:
                 self.scheduler.step()
 
-            if best_loss is None or np.min(test_result.losses) < best_loss:
-                best_loss = np.min(test_result.losses)
+            if best_loss is None or np.mean(test_result.losses) < best_loss:
+                best_loss = np.mean(test_result.losses)
                 epochs_without_improvement = 0
                 if checkpoints is not None:
                     self.save_checkpoint(checkpoints)
@@ -158,7 +159,7 @@ class Trainer(abc.ABC):
         loss.backward()  # Run backprop algorithms to calculate gradients
         self.optimizer.step()  # Use gradients to update model parameters
         batch_loss = loss.item()
-        num_correct = np.sum(1/loss.item())
+        num_correct = int(torch.sum((y_pred - y) < 3))
 
         return BatchResult(batch_loss, num_correct)
 
@@ -183,7 +184,7 @@ class Trainer(abc.ABC):
             y_pred = np.squeeze(self.model(X))
             loss = self.loss_fn(y_pred, y)
             batch_loss = loss.item()
-            num_correct = np.sum(1/loss.item())
+            num_correct = int(torch.sum((y_pred - y) < 3))
 
         return BatchResult(batch_loss, num_correct)
 

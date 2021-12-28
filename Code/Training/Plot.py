@@ -95,7 +95,7 @@ def plot_exp_results(filename_pattern, results_dir='../../Results/experiments/re
 
 
 def main():
-    plot_exp_results('exp1_1*.json')
+    plot_exp_results('exp_lr*.json')
 
 
 if __name__ == "__main__":

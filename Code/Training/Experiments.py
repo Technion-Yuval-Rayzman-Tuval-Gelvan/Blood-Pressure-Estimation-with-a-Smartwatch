@@ -5,9 +5,14 @@ import sys
 import torch
 import numpy as np
 import tqdm.auto
-from Code.Training import ResNet, LoadData, HDF5DataLoader
-from Code.Training.TrainResult import FitResult
-from Code.Training.Trainer import Trainer
+sys.path.append('../../Code/Training/Trainer.py')
+sys.path.append('../../Code/Training')
+sys.path.append('../../Code/Training/TrainResult.py')
+# Now do your import
+import ResNet, LoadData, HDF5DataLoader
+from TrainResult import FitResult
+from Trainer import Trainer
+import datetime
 from datetime import date
 
 today = date.today().strftime("%d_%m_%Y")
@@ -26,12 +31,12 @@ def resnet_experiment(
     batches=100,
     epochs=100,
     early_stopping=3,
-    checkpoints=f'../../Models/HDF5_Models/{today}',
+    checkpoints='../../Models/HDF5_Models/',
     lr=1e-3,
     weight_decay=1e-3,
     eps=1e-6,
     gamma=0.9,
-    scheduler=True,
+    scheduler=False,
 ):
     if not seed:
         seed = torch.random.randint(0, 2 ** 31)
@@ -40,8 +45,8 @@ def resnet_experiment(
         bs_test = max([bs_train // 4, 1])
     if not device:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    if not checkpoints:
-        checkpoints = f'{checkpoints}_{model_name}'
+    if checkpoints:
+        checkpoints = f"{checkpoints}{today}_{model_name}"
     cfg = locals()
 
     fit_res = None
@@ -56,14 +61,14 @@ def resnet_experiment(
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, eps=eps)
 
-    if scheduler:
+    if scheduler is True:
         # Decay learning rate each epoch
         scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma, verbose=True)
 
     trainer = Trainer(model, loss_fn, optimizer, device, scheduler)
 
-    dl_train = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', batch_size=bs_train, max_chuncks=4)
-    dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=1)
+    dl_train = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', batch_size=bs_train, max_chuncks=8)
+    dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=2)
     print(len(dl_valid))
     print(len(dl_train))
 
@@ -77,8 +82,9 @@ def save_experiment(run_name, out_dir, cfg, fit_res, model_name):
     del cfg['device']
     output = dict(config=cfg, results=fit_res)
     print(cfg)
+    lr = cfg['lr']
     cfg_LK = (
-        f'{today}_{model_name}'
+        f'{today}_{model_name}_{lr}'
     )
     output_filename = f"{os.path.join(out_dir, run_name)}_{cfg_LK}.json"
     os.makedirs(out_dir, exist_ok=True)
@@ -163,13 +169,13 @@ def parse_cli():
         "--checkpoints",
         type=str,
         help="Save model checkpoints to this file when test " "accuracy improves",
-        default=f'../../Models/Resnet18_Models/{today}',
+        default="../../Models/Resnet18_Models/",
     )
     sp_exp.add_argument("--lr", type=float, help="Learning rate", default=1e-2)
     sp_exp.add_argument("--weight_decay", type=float, help="Weight decay", default=1e-3)
     sp_exp.add_argument("--eps", type=float, help="Epsilon", default=1e-6)
     sp_exp.add_argument("--gamma", type=float, help="Scheduler gamma", default=0.9)
-    sp_exp.add_argument("--scheduler", type=bool, help="scheduler", default=True)
+    sp_exp.add_argument("--scheduler", type=bool, help="scheduler", default=False)
 
     parsed = p.parse_args()
 
