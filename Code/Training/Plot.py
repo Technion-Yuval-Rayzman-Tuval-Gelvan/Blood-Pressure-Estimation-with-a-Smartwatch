@@ -86,16 +86,18 @@ def plot_exp_results(filename_pattern, results_dir='../../Results/experiments/re
         print(f'No results found for pattern {filename_pattern}.', file=sys.stderr)
         return
     for filepath in result_files:
-        m = re.match('exp\d_(\d_)?(.*)\.json', os.path.basename(filepath))
+        m = re.match('exp_lr_(\d_)?(.*)\.json', os.path.basename(filepath))
+        print(m[0], m)
         cfg, fit_res = load_experiment(filepath)
-        fig, axes = plot_fit(fit_res, fig, legend=m[2],log_loss=True)
+        fig, axes = plot_fit(fit_res, fig, legend=m[0], log_loss=False)
 
     print('common config: ', cfg)
     plt.show()
 
 
 def main():
-    plot_exp_results('exp_lr*.json')
+    # plot_exp_results('exp1_1*.json')
+    plot_exp_results('exp_lr_64_28*_sys_model*0.001.json')
 
 
 if __name__ == "__main__":

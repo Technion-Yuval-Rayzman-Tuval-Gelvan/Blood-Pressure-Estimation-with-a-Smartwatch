@@ -9,13 +9,71 @@ sys.path.append('../../Code/Training/Trainer.py')
 sys.path.append('../../Code/Training')
 sys.path.append('../../Code/Training/TrainResult.py')
 # Now do your import
-import ResNet, LoadData, HDF5DataLoader
+import ResNet, LoadData, HDF5DataLoader, DenseNet
 from TrainResult import FitResult
 from Trainer import Trainer
 import datetime
 from datetime import date
 
 today = date.today().strftime("%d_%m_%Y")
+
+def densenet_experiment(
+    run_name,
+    out_dir="../../Results/experiments/densenet",
+    data_path='../../Data',
+    model_name='dias_model',
+    seed=None,
+    device=None,
+    # Training params
+    bs_train=128,
+    bs_test=None,
+    batches=100,
+    epochs=100,
+    early_stopping=3,
+    checkpoints='../../Models/HDF5_Models/',
+    lr=1e-3,
+    weight_decay=1e-3,
+    eps=1e-6,
+    gamma=0.9,
+    scheduler=False,
+):
+    if not seed:
+        seed = torch.random.randint(0, 2 ** 31)
+    torch.manual_seed(seed)
+    if not bs_test:
+        bs_test = max([bs_train // 4, 1])
+    if not device:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if checkpoints:
+        checkpoints = f"{checkpoints}{today}_{model_name}"
+    cfg = locals()
+
+    fit_res = None
+
+    print("run on:", device)
+
+    model = DenseNet.create_densenet_model()
+    model = model.to(device)
+
+    loss_fn = torch.nn.L1Loss()
+    loss_fn = loss_fn.to(device)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, eps=eps)
+
+    if scheduler is True:
+        # Decay learning rate each epoch
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma, verbose=True)
+
+    trainer = Trainer(model, loss_fn, optimizer, device, scheduler)
+
+    dl_train = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', batch_size=bs_train, max_chuncks=8)
+    dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=2)
+    assert len(dl_valid) == len(dl_train)
+
+    fit_res = trainer.fit(dl_train, dl_valid, num_epochs=epochs, print_every=1, early_stopping=early_stopping,
+                          checkpoints=checkpoints, max_batches=batches)
+
+    save_experiment(run_name, out_dir, cfg, fit_res, model_name)
 
 
 def resnet_experiment(
@@ -53,7 +111,11 @@ def resnet_experiment(
 
     print("run on:", device)
 
-    model = ResNet.create_resnet_model()
+    if checkpoints and os.path.exists(checkpoints):
+        model = torch.load(checkpoints)
+        print(f"\n*** Load checkpoint {checkpoints}")
+    else:
+        model = ResNet.create_resnet_model()
     model = model.to(device)
 
     loss_fn = torch.nn.L1Loss()
@@ -69,8 +131,7 @@ def resnet_experiment(
 
     dl_train = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', batch_size=bs_train, max_chuncks=8)
     dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=2)
-    print(len(dl_valid))
-    print(len(dl_train))
+    assert len(dl_valid) == len(dl_train)
 
     fit_res = trainer.fit(dl_train, dl_valid, num_epochs=epochs, print_every=1, early_stopping=early_stopping,
                           checkpoints=checkpoints, max_batches=batches)
@@ -111,7 +172,7 @@ def parse_cli():
     sp_exp = sp.add_parser(
         "run-exp", help="Run experiment with a single " "configuration"
     )
-    sp_exp.set_defaults(subcmd_fn=resnet_experiment)
+    sp_exp.set_defaults(subcmd_fn=densenet_experiment)
     sp_exp.add_argument(
         "--run-name", "-n", type=str, help="Name of run and output file", required=True
     )
@@ -120,7 +181,7 @@ def parse_cli():
         "-o",
         type=str,
         help="Output folder",
-        default="../../Results/experiments/resnet18",
+        default="../../Results/experiments/densenet",
         required=False,
     )
     sp_exp.add_argument(
@@ -169,7 +230,7 @@ def parse_cli():
         "--checkpoints",
         type=str,
         help="Save model checkpoints to this file when test " "accuracy improves",
-        default="../../Models/Resnet18_Models/",
+        default="../../Models/Densenet_Models/",
     )
     sp_exp.add_argument("--lr", type=float, help="Learning rate", default=1e-2)
     sp_exp.add_argument("--weight_decay", type=float, help="Weight decay", default=1e-3)
