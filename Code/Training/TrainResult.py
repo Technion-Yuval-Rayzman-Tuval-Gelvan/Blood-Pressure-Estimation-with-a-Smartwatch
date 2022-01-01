@@ -9,6 +9,8 @@ class BatchResult(NamedTuple):
 
     loss: float
     num_correct: int
+    pred_labels: List[float]
+    target_labels: List[float]
 
 
 class EpochResult(NamedTuple):
@@ -19,6 +21,8 @@ class EpochResult(NamedTuple):
 
     losses: List[float]
     accuracy: float
+    pred_labels: List[float]
+    target_labels: List[float]
 
 
 class FitResult(NamedTuple):

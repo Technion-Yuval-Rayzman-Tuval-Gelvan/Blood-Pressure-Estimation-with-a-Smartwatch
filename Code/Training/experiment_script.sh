@@ -53,12 +53,19 @@ python -c 'import torch; print(f"i can haz gpu? {torch.cuda.is_available()}")'
 #python Experiments.py run-exp -n exp_tr_64 --epochs 20 --bs-train 64 --batches 12500 --seed 42 --early-stopping 25 --model-name sys_model --lr 0.001;
 
 echo "Dense Net Experiment"
-echo "Dias Model"
-echo "Training experiment"
+#echo "Dias Model"
+#echo "Training experiment"
 
-python Experiments.py run-exp -n exp_tr_64 --epochs 30 --bs-train 64 --batches 12500 --seed 42 --early-stopping 25 --model-name dias_model --lr 0.001;
+#python Experiments.py run-exp -n exp_tr_64 --epochs 30 --bs-train 64 --batches 12500 --seed 42 --early-stopping 25 --model-name dias_model --lr 0.001 --scheduler True;
 
-echo "Sys Model"
-echo "Training experiment"
+#echo "Plot Confusion Matrix"
+#echo "Dias Model"
+#
+python Experiments.py run-exp -n exp_tr_64 --epochs 30 --bs-train 64 --batches 12500 --seed 42 --early-stopping 25 --model-name dias_model --lr 0.001 --p True;
 
-python Experiments.py run-exp -n exp_tr_64 --epochs 30 --bs-train 64 --batches 12500 --seed 42 --early-stopping 25 --model-name sys_model --lr 0.001;
+
+#echo "Sys Model"
+#echo "Training experiment"
+#
+#python Experiments.py run-exp -n exp_tr_64 --epochs 50 --bs-train 64 --batches 12500 --seed 42 --early-stopping 25 --model-name sys_model --lr 0.01 --scheduler True;
+

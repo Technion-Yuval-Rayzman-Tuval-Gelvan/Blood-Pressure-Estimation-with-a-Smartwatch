@@ -5,11 +5,12 @@ import sys
 import torch
 import numpy as np
 import tqdm.auto
+
 sys.path.append('../../Code/Training/Trainer.py')
 sys.path.append('../../Code/Training')
 sys.path.append('../../Code/Training/TrainResult.py')
 # Now do your import
-import ResNet, LoadData, HDF5DataLoader, DenseNet
+import ResNet, LoadData, HDF5DataLoader, DenseNet, PlotConfusion
 from TrainResult import FitResult
 from Trainer import Trainer
 import datetime
@@ -36,6 +37,7 @@ def densenet_experiment(
     eps=1e-6,
     gamma=0.9,
     scheduler=False,
+    plot_confusion=False
 ):
     if not seed:
         seed = torch.random.randint(0, 2 ** 31)
@@ -45,14 +47,19 @@ def densenet_experiment(
     if not device:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if checkpoints:
-        checkpoints = f"{checkpoints}{today}_{model_name}"
+        checkpoints = f"{checkpoints}{today}_{model_name}.pt"
     cfg = locals()
 
     fit_res = None
 
     print("run on:", device)
 
-    model = DenseNet.create_densenet_model()
+    if plot_confusion is True:
+        model_path = '../../Models/Densenet_Models/29_12_2021_dias_model'
+        model = torch.load(model_path)
+        print(f"\n*** Load checkpoint {model_path}")
+    else:
+        model = DenseNet.create_densenet_model()
     model = model.to(device)
 
     loss_fn = torch.nn.L1Loss()
@@ -62,7 +69,7 @@ def densenet_experiment(
 
     if scheduler is True:
         # Decay learning rate each epoch
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma, verbose=True)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=gamma, patience=5, verbose=True)
 
     trainer = Trainer(model, loss_fn, optimizer, device, scheduler)
 
@@ -70,10 +77,16 @@ def densenet_experiment(
     dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=2)
     assert len(dl_valid) == len(dl_train)
 
-    fit_res = trainer.fit(dl_train, dl_valid, num_epochs=epochs, print_every=1, early_stopping=early_stopping,
-                          checkpoints=checkpoints, max_batches=batches)
+    if plot_confusion is True:
+        epoch_res = trainer.test_epoch(dl_train, verbose=True, max_batches=batches, plot_confusion=True)
+        PlotConfusion.confusion_matrix(epoch_res)
 
-    save_experiment(run_name, out_dir, cfg, fit_res, model_name)
+        save_experiment(run_name, out_dir, cfg, epoch_res, model_name)
+    else:
+        fit_res = trainer.fit(dl_train, dl_valid, num_epochs=epochs, print_every=1, early_stopping=early_stopping,
+                              checkpoints=checkpoints, max_batches=batches, plot_confusion=False)
+
+        save_experiment(run_name, out_dir, cfg, fit_res, model_name)
 
 
 def resnet_experiment(
@@ -95,6 +108,7 @@ def resnet_experiment(
     eps=1e-6,
     gamma=0.9,
     scheduler=False,
+    plot_confusion=False,
 ):
     if not seed:
         seed = torch.random.randint(0, 2 ** 31)
@@ -111,9 +125,12 @@ def resnet_experiment(
 
     print("run on:", device)
 
-    if checkpoints and os.path.exists(checkpoints):
-        model = torch.load(checkpoints)
-        print(f"\n*** Load checkpoint {checkpoints}")
+    if plot_confusion is True:
+        # Insert model path to plot
+        model_path = None
+        assert model_path is not None
+        model = torch.load(model_path)
+        print(f"\n*** Load checkpoint {model_path}")
     else:
         model = ResNet.create_resnet_model()
     model = model.to(device)
@@ -133,10 +150,14 @@ def resnet_experiment(
     dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=2)
     assert len(dl_valid) == len(dl_train)
 
-    fit_res = trainer.fit(dl_train, dl_valid, num_epochs=epochs, print_every=1, early_stopping=early_stopping,
-                          checkpoints=checkpoints, max_batches=batches)
+    if plot_confusion is True:
+        epoch_res = trainer.test_epoch(dl_train, verbose=True, max_batches=batches, plot_confusion=True)
+        PlotConfusion.confusion_matrix(epoch_res)
+    else:
+        fit_res = trainer.fit(dl_train, dl_valid, num_epochs=epochs, print_every=1, early_stopping=early_stopping,
+                              checkpoints=checkpoints, max_batches=batches, plot_confusion=False)
 
-    save_experiment(run_name, out_dir, cfg, fit_res, model_name)
+        save_experiment(run_name, out_dir, cfg, fit_res, model_name)
 
 
 def save_experiment(run_name, out_dir, cfg, fit_res, model_name):
@@ -235,8 +256,9 @@ def parse_cli():
     sp_exp.add_argument("--lr", type=float, help="Learning rate", default=1e-2)
     sp_exp.add_argument("--weight_decay", type=float, help="Weight decay", default=1e-3)
     sp_exp.add_argument("--eps", type=float, help="Epsilon", default=1e-6)
-    sp_exp.add_argument("--gamma", type=float, help="Scheduler gamma", default=0.9)
+    sp_exp.add_argument("--gamma", type=float, help="Scheduler gamma", default=0.5)
     sp_exp.add_argument("--scheduler", type=bool, help="scheduler", default=False)
+    sp_exp.add_argument("--plot-confusion", "-p", type=bool, help="Plot confusion matrix", default=False, required=False)
 
     parsed = p.parse_args()
 

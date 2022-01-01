@@ -72,6 +72,7 @@ class Trainer(abc.ABC):
         epochs_without_improvement = 0
 
         train_loss, train_acc, test_loss, test_acc = [], [], [], []
+        target_labels, pred_labels = [], []
         best_loss = None
 
         for epoch in range(num_epochs):
@@ -91,7 +92,7 @@ class Trainer(abc.ABC):
             test_acc.append(test_result.accuracy)
 
             if self.scheduler is True:
-                self.scheduler.step()
+                self.scheduler.step(test_loss)
 
             if best_loss is None or np.mean(test_result.losses) < best_loss:
                 best_loss = np.mean(test_result.losses)
@@ -101,9 +102,11 @@ class Trainer(abc.ABC):
             else:
                 epochs_without_improvement += 1
                 if early_stopping == epochs_without_improvement:
-                    return FitResult(actual_num_epochs, train_loss, train_acc, test_loss, test_acc)
+                    return FitResult(actual_num_epochs, train_loss, train_acc, test_loss, test_acc,
+                                     pred_labels=pred_labels, target_labels=target_labels)
 
-        return FitResult(actual_num_epochs, train_loss, train_acc, test_loss, test_acc)
+        return FitResult(actual_num_epochs, train_loss, train_acc, test_loss, test_acc,
+                         pred_labels=pred_labels, target_labels=target_labels)
 
     def save_checkpoint(self, checkpoint_filename: str):
         """
@@ -161,7 +164,7 @@ class Trainer(abc.ABC):
         batch_loss = loss.item()
         num_correct = int(torch.sum((y_pred - y) < 3))
 
-        return BatchResult(batch_loss, num_correct)
+        return BatchResult(batch_loss, num_correct, pred_labels=y_pred, target_labels=y)
 
     def test_batch(self, batch) -> BatchResult:
         """
@@ -186,7 +189,7 @@ class Trainer(abc.ABC):
             batch_loss = loss.item()
             num_correct = int(torch.sum((y_pred - y) < 3))
 
-        return BatchResult(batch_loss, num_correct)
+        return BatchResult(batch_loss, num_correct, pred_labels=y_pred, target_labels=y)
 
     @staticmethod
     def _print(message, verbose=True):
@@ -200,12 +203,15 @@ class Trainer(abc.ABC):
         forward_fn: Callable[[Any], BatchResult],
         verbose=True,
         max_batches=None,
+        plot_confusion=False,
     ) -> EpochResult:
         """
         Evaluates the given forward-function on batches from the given
         dataloader, and prints progress along the way.
         """
         losses = []
+        target_labels = []
+        pred_labels = []
         num_correct = 0
         num_samples = len(dl.sampler)
         num_batches = len(dl.batch_sampler)
@@ -234,6 +240,9 @@ class Trainer(abc.ABC):
 
                 losses.append(batch_res.loss)
                 num_correct += batch_res.num_correct
+                if plot_confusion is True:
+                    pred_labels.extend(batch_res.pred_labels)
+                    target_labels.extend(batch_res.target_labels)
 
             avg_loss = sum(losses) / num_batches
             accuracy = 100.0 * num_correct / num_samples
@@ -246,7 +255,7 @@ class Trainer(abc.ABC):
         if not verbose:
             pbar_file.close()
 
-        return EpochResult(losses=losses, accuracy=accuracy)
+        return EpochResult(losses=losses, accuracy=accuracy, pred_labels=pred_labels, target_labels=target_labels)
 
 
 def main():

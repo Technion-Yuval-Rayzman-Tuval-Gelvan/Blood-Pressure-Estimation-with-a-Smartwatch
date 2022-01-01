@@ -58,7 +58,9 @@ def plot_fit(
         attr = f"{traintest}_{lossacc}"
         data = getattr(fit_res, attr)
         label = traintest if train_test_overlay else legend
-        h = ax.plot(np.arange(1, len(data) + 1), data, label=label)
+        if attr == 'train_loss' or attr == 'test_loss':
+            data = np.mean(np.array(data).reshape(-1, 5000), axis=1)
+        h = ax.plot(np.arange(1, len(data)*5000 + 1, 5000), data, label=label)
         ax.set_title(attr)
 
         if lossacc == "loss":
@@ -78,7 +80,7 @@ def plot_fit(
     return fig, axes
 
 
-def plot_exp_results(filename_pattern, results_dir='../../Results/experiments/resnet18/'):
+def plot_exp_results(filename_pattern, results_dir='../../Results/experiments/densenet/'):
     fig = None
     result_files = glob.glob(os.path.join(results_dir, filename_pattern))
     result_files.sort()
@@ -86,7 +88,7 @@ def plot_exp_results(filename_pattern, results_dir='../../Results/experiments/re
         print(f'No results found for pattern {filename_pattern}.', file=sys.stderr)
         return
     for filepath in result_files:
-        m = re.match('exp_lr_(\d_)?(.*)\.json', os.path.basename(filepath))
+        m = re.match('exp_tr_(\d_)?(.*)\.json', os.path.basename(filepath))
         print(m[0], m)
         cfg, fit_res = load_experiment(filepath)
         fig, axes = plot_fit(fit_res, fig, legend=m[0], log_loss=False)
@@ -97,7 +99,7 @@ def plot_exp_results(filename_pattern, results_dir='../../Results/experiments/re
 
 def main():
     # plot_exp_results('exp1_1*.json')
-    plot_exp_results('exp_lr_64_28*_sys_model*0.001.json')
+    plot_exp_results('exp_tr_64*_dias_model*0.001.json')
 
 
 if __name__ == "__main__":
