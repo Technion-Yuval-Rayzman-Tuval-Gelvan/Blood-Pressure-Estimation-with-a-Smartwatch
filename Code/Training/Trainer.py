@@ -102,11 +102,13 @@ class Trainer(abc.ABC):
             else:
                 epochs_without_improvement += 1
                 if early_stopping == epochs_without_improvement:
-                    return FitResult(actual_num_epochs, train_loss, train_acc, test_loss, test_acc,
-                                     pred_labels=pred_labels, target_labels=target_labels)
+                    final_model_path = f"{checkpoints[:-3]}_final.pt"
+                    self.save_checkpoint(final_model_path)
+                    return FitResult(actual_num_epochs, train_loss, train_acc, test_loss, test_acc)
 
-        return FitResult(actual_num_epochs, train_loss, train_acc, test_loss, test_acc,
-                         pred_labels=pred_labels, target_labels=target_labels)
+        final_model_path = f"{checkpoints[:-3]}_final.pt"
+        self.save_checkpoint(final_model_path)
+        return FitResult(actual_num_epochs, train_loss, train_acc, test_loss, test_acc)
 
     def save_checkpoint(self, checkpoint_filename: str):
         """

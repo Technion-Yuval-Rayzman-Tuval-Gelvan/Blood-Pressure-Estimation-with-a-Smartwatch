@@ -65,7 +65,7 @@ def densenet_experiment(
     loss_fn = torch.nn.L1Loss()
     loss_fn = loss_fn.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, eps=eps)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     if scheduler is True:
         # Decay learning rate each epoch
@@ -73,8 +73,8 @@ def densenet_experiment(
 
     trainer = Trainer(model, loss_fn, optimizer, device, scheduler)
 
-    dl_train = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', batch_size=bs_train, max_chuncks=8)
-    dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=2)
+    dl_train = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', batch_size=bs_train, max_chuncks=80)
+    dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=20)
     assert len(dl_valid) == len(dl_train)
 
     if plot_confusion is True:
@@ -138,16 +138,16 @@ def resnet_experiment(
     loss_fn = torch.nn.L1Loss()
     loss_fn = loss_fn.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, eps=eps)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     if scheduler is True:
         # Decay learning rate each epoch
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma, verbose=True)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=gamma, patience=5, verbose=True)
 
     trainer = Trainer(model, loss_fn, optimizer, device, scheduler)
 
-    dl_train = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', batch_size=bs_train, max_chuncks=8)
-    dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=2)
+    dl_train = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', batch_size=bs_train, max_chuncks=80)
+    dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=20)
     assert len(dl_valid) == len(dl_train)
 
     if plot_confusion is True:
