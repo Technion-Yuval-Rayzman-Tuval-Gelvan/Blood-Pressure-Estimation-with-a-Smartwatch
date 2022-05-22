@@ -1,4 +1,5 @@
 import glob
+import pickle
 from multiprocessing import Pool
 # import vital_sqi as vs
 import matplotlib.pyplot as plt
@@ -17,60 +18,84 @@ from scipy.stats import entropy
 #You can also use Pandas if you so desire
 import pandas as pd
 import heartpy as hp
+import PyQt5
 from scipy.stats import kurtosis, skew, entropy
-from PreProcessing import remove_unrelevant_records
+from PreProcessing import remove_unrelevant_records, record_to_windows, window_valid
 import os
 
 DB_DIR = 'mimic3wdb'
-LOAD_DIR = '../mimic3wdb/1.0/'
+LOAD_DIR = '/host/media/tuvalgelvan@staff.technion.ac.il/HD34/Estimated-Blood-Pressure-Project/mimic3wdb/1.0'
+TEST_DIR = '/host/media/tuvalgelvan@staff.technion.ac.il/HD34/Estimated-Blood-Pressure-Project/test_data'
+
 
 # load database with ABP and PLETH signals
-def load_filtered_records():
-    for root, dirs, files in os.walk(LOAD_DIR):
-        records = []
-        path = root.split(os.sep)
-        print(f"loading {os.path.basename(root)}")
-    print(os.path.exists(LOAD_DIR))
-    records_list = glob.glob(LOAD_DIR, recursive=True)
-    print(records_list)
+def load_filtered_records(max_len=None):
+
+    # load list
+    with open('records_list', 'rb') as file:
+        records_list = pickle.load(file)
+
+    if max_len:
+        records_list = records_list[:max_len]
+
+    print("loading records..")
+    windows = []
+    pool = Pool()
+    for _ in tqdm(pool.imap(func=load_record, iterable=records_list), total=len(records_list)):
+        pass
 
 
-    # print("loading records..")
-    # pool = Pool()
-    # for _ in tqdm.tqdm(pool.imap(func=load_record(), iterable=records_path_list), total=len(records_path_list)):
-    #     pass
+def plot_win(wd, m, name, savefig=False):
+    hp.config.colorblind = False
+    hp.config.color_style = 'default'
+
+    hp.plotter(wd, m, show=False)
+    if savefig:
+        plt.savefig(f"{TEST_DIR}/plots/{name}.png")
 
 
-def load_record(records_path):
-    records = []
-    total_windows = total_bp_filtered = total_ppg_filtered = 0
-    # traverse root directory, and list directories as dirs and files as files
-    print("loading records...")
-    for root, dirs, files in os.walk(records_path):
-        records = []
-        path = root.split(os.sep)
-        print(f"loading {os.path.basename(root)}")
-        # print(root)
-        # print((len(path) - 1) * '---', os.path.basename(root))
-        for file in files:
-            # print(len(path) * '---', file)
-            with open(f'{posixpath.join(root, file)}', 'rb') as f:
-                record = pickle.load(f)
-                records.append(record)
+def load_record(record_path):
 
-        num_windows, num_filtered_bp_samples, num_filtered_ppg_samples = filter_and_save_data(records)
-        total_windows += num_windows
-        total_bp_filtered += num_filtered_bp_samples
-        total_ppg_filtered += num_filtered_ppg_samples
-        print(
-            f"Num Windows (30 sec): {total_windows}, After bp filter: {total_bp_filtered}, After ppg filter: {total_ppg_filtered}")
+    with open(record_path, 'rb') as file:
+        record = pickle.load(file)
 
-    print("loading records done")
+    valid_windows = []
+    if record.record_name[-1] == 'n':
+        return valid_windows
+
+    record_windows = record_to_windows(record)
+    if len(record_windows) != 0:
+        bp_index = record_windows[0].sig_name.index('ABP')
+        ppg_index = record_windows[0].sig_name.index('PLETH')
+        for i, win in enumerate(record_windows):
+            if window_valid(win, bp_index, ppg_index):
+                ppg_signal = win.p_signal[:, ppg_index]
+                try:
+                    wd, m = hp.process(ppg_signal, record.fs, clean_rr=True)
+                except:
+                    print(f"Bad record: {record.record_name} Win: {i}")
+                peaks_len = len(wd['peaklist'])
+                num_bad_peaks = np.count_nonzero(wd['RR_masklist'])
+                bad_peak_precent = (num_bad_peaks/peaks_len)*100
+                if bad_peak_precent < 5:
+                    plot_win(wd, m, name=f'/good/{record.record_name}_{i}', savefig=True)
+                if bad_peak_precent > 80:
+                    plot_win(wd, m, name=f'/bad/{record.record_name}_{i}', savefig=True)
+                if 48 < bad_peak_precent < 52:
+                    plot_win(wd, m, name=f'/mid/{record.record_name}_{i}', savefig=True)
+
+
+def save_records_list():
+    records_list = [os.path.join(path, name) for path, subdirs, files in os.walk(LOAD_DIR) for name in files]
+    # save list
+    with open('records_list', 'wb') as file:
+        pickle.dump(records_list, file)
 
 
 def main():
-
-    load_filtered_records()
+    max_len = 200
+    # save_records_list()
+    load_filtered_records(max_len)
 
 
 if __name__ == "__main__":
