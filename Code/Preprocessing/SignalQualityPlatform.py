@@ -13,9 +13,9 @@ import wfdb
 from tqdm import tqdm
 from wfdb.io import download
 import matplotlib.pyplot as plt
-from scipy.signal import find_peaks,welch
+from scipy.signal import find_peaks, welch
 from scipy.stats import entropy
-#You can also use Pandas if you so desire
+# You can also use Pandas if you so desire
 import pandas as pd
 import heartpy as hp
 import PyQt5
@@ -26,11 +26,21 @@ import os
 DB_DIR = 'mimic3wdb'
 LOAD_DIR = '/host/media/tuvalgelvan@staff.technion.ac.il/HD34/Estimated-Blood-Pressure-Project/mimic3wdb/1.0'
 TEST_DIR = '/host/media/tuvalgelvan@staff.technion.ac.il/HD34/Estimated-Blood-Pressure-Project/test_data'
+PLOT = False
+
+
+class Window:
+
+    def __init__(self, window, bp_index, ppg_index, wd, m):
+        self.window = window
+        self.bp_index = bp_index
+        self.ppg_index = ppg_index
+        self.working_data = wd
+        self.measures = m
 
 
 # load database with ABP and PLETH signals
 def load_filtered_records(max_len=None):
-
     # load list
     with open('records_list', 'rb') as file:
         records_list = pickle.load(file)
@@ -43,19 +53,29 @@ def load_filtered_records(max_len=None):
     pool = Pool()
     for _ in tqdm(pool.imap(func=load_record, iterable=records_list), total=len(records_list)):
         pass
+    # for record_path in records_list:
+    #     load_record(record_path)
 
 
-def plot_win(wd, m, name, savefig=False):
+def plot_win(wd, m, name):
     hp.config.colorblind = False
     hp.config.color_style = 'default'
 
-    hp.plotter(wd, m, show=False)
-    if savefig:
-        plt.savefig(f"{TEST_DIR}/plots/{name}.png")
+    try:
+        hp.plotter(wd, m, show=False)
+    except:
+        print(f"Bad plot: {name}")
+        return
+
+    plt.savefig(f"{TEST_DIR}/plots/{name}.png")
+
+
+def save_win(win, name):
+    with open(f"{TEST_DIR}/windows/{name}", 'wb') as file:
+        pickle.dump(win, file)
 
 
 def load_record(record_path):
-
     with open(record_path, 'rb') as file:
         record = pickle.load(file)
 
@@ -71,18 +91,32 @@ def load_record(record_path):
             if window_valid(win, bp_index, ppg_index):
                 ppg_signal = win.p_signal[:, ppg_index]
                 try:
-                    wd, m = hp.process(ppg_signal, record.fs, clean_rr=True)
+                    wd, m = hp.process(ppg_signal, record.fs)
                 except:
                     print(f"Bad record: {record.record_name} Win: {i}")
+                    return
+                wd, m = hp.process(ppg_signal, record.fs, clean_rr=True)
                 peaks_len = len(wd['peaklist'])
                 num_bad_peaks = np.count_nonzero(wd['RR_masklist'])
-                bad_peak_precent = (num_bad_peaks/peaks_len)*100
+                bad_peak_precent = (num_bad_peaks / peaks_len) * 100
+                win = Window(win, bp_index, ppg_index, wd, m)
                 if bad_peak_precent < 5:
-                    plot_win(wd, m, name=f'/good/{record.record_name}_{i}', savefig=True)
+                    save_name = f'/good/{record.record_name}_{i}'
+                    if PLOT:
+                        plot_win(wd, m, name=save_name)
+                    save_win(win, save_name)
                 if bad_peak_precent > 80:
-                    plot_win(wd, m, name=f'/bad/{record.record_name}_{i}', savefig=True)
+                    save_name = f'/bad/{record.record_name}_{i}'
+                    if PLOT:
+                        plot_win(wd, m, name=save_name)
+                    save_win(win, save_name)
                 if 48 < bad_peak_precent < 52:
-                    plot_win(wd, m, name=f'/mid/{record.record_name}_{i}', savefig=True)
+                    save_name = f'/mid/{record.record_name}_{i}'
+                    if PLOT:
+                        plot_win(wd, m, name=save_name)
+                    save_win(win, save_name)
+
+
 
 
 def save_records_list():
@@ -93,12 +127,10 @@ def save_records_list():
 
 
 def main():
-    max_len = 200
+    max_len = 20
     # save_records_list()
     load_filtered_records(max_len)
 
 
 if __name__ == "__main__":
     main()
-
-
