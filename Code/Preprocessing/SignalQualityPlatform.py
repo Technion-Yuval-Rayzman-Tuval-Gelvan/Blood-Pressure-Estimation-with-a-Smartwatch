@@ -32,11 +32,18 @@ PLOT = False
 class Window:
 
     def __init__(self, window, bp_index, ppg_index, wd, m):
-        self.window = window
+        self.record = window
         self.bp_index = bp_index
         self.ppg_index = ppg_index
         self.working_data = wd
         self.measures = m
+        self.s_sqi = None
+        self.p_sqi = None
+        self.m_sqi = None
+        self.e_sqi = None
+        self.z_sqi = None
+        self.snr_sqi = None
+        self.k_sqi = None
 
 
 # load database with ABP and PLETH signals
@@ -49,7 +56,6 @@ def load_filtered_records(max_len=None):
         records_list = records_list[:max_len]
 
     print("loading records..")
-    windows = []
     pool = Pool()
     for _ in tqdm(pool.imap(func=load_record, iterable=records_list), total=len(records_list)):
         pass
@@ -100,7 +106,7 @@ def load_record(record_path):
                 num_bad_peaks = np.count_nonzero(wd['RR_masklist'])
                 bad_peak_precent = (num_bad_peaks / peaks_len) * 100
                 win = Window(win, bp_index, ppg_index, wd, m)
-                if bad_peak_precent < 5:
+                if bad_peak_precent < 2:
                     save_name = f'/good/{record.record_name}_{i}'
                     if PLOT:
                         plot_win(wd, m, name=save_name)
@@ -117,8 +123,6 @@ def load_record(record_path):
                     save_win(win, save_name)
 
 
-
-
 def save_records_list():
     records_list = [os.path.join(path, name) for path, subdirs, files in os.walk(LOAD_DIR) for name in files]
     # save list
@@ -127,7 +131,7 @@ def save_records_list():
 
 
 def main():
-    max_len = 20
+    max_len = 50
     # save_records_list()
     load_filtered_records(max_len)
 
