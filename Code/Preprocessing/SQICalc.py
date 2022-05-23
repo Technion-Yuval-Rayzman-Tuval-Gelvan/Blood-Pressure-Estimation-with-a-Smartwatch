@@ -22,13 +22,13 @@ def load_and_calculate_win_sqi(win_path):
         window = pickle.load(file)
 
     ppg_signal = window.record.p_signal[:, window.ppg_index]
-    window.s_sqi = round(skewness_sqi(ppg_signal), 2)
-    window.p_sqi = round(perfusion_sqi(ppg_signal, ppg_signal), 2)
-    window.m_sqi = round(mean_crossing_rate_sqi(ppg_signal), 2)
-    window.e_sqi = round(entropy_sqi(ppg_signal), 2)
-    window.z_sqi = round(zero_crossings_rate_sqi(ppg_signal), 2)
-    window.snr_sqi = round(float(signal_to_noise_sqi(ppg_signal)), 2)
-    window.k_sqi = round(kurtosis_sqi(ppg_signal), 2)
+    window.s_sqi = round(skewness_sqi(ppg_signal), 4)
+    window.p_sqi = round(perfusion_sqi(ppg_signal, ppg_signal), 4)
+    window.m_sqi = round(mean_crossing_rate_sqi(ppg_signal), 4)
+    window.e_sqi = round(entropy_sqi(ppg_signal), 4)
+    window.z_sqi = round(zero_crossings_rate_sqi(ppg_signal), 4)
+    window.snr_sqi = round(float(signal_to_noise_sqi(ppg_signal)), 4)
+    window.k_sqi = round(kurtosis_sqi(ppg_signal), 4)
 
     print(window.s_sqi, window.p_sqi, window.m_sqi, window.e_sqi, window.z_sqi, window.snr_sqi, window.k_sqi)
 
