@@ -20,12 +20,17 @@ import pandas as pd
 import heartpy as hp
 import PyQt5
 from scipy.stats import kurtosis, skew, entropy
+
+from Code.Preprocessing.SQICalc import calculate_win_sqi
 from PreProcessing import remove_unrelevant_records, record_to_windows, window_valid
 import os
 
 DB_DIR = 'mimic3wdb'
-LOAD_DIR = '/host/media/tuvalgelvan@staff.technion.ac.il/HD34/Estimated-Blood-Pressure-Project/mimic3wdb/1.0'
-TEST_DIR = '/host/media/tuvalgelvan@staff.technion.ac.il/HD34/Estimated-Blood-Pressure-Project/test_data'
+BASE_DIR = '/host/media/tuvalgelvan@staff.technion.ac.il/HD34/Estimated-Blood-Pressure-Project/'
+LOAD_DIR = f'{BASE_DIR}/mimic3wdb/1.0'
+TEST_DIR = f'{BASE_DIR}/test_data'
+WINDOWS_DIR = f'{BASE_DIR}/test_data/windows'
+PLOT_DIR = f'{BASE_DIR}/test_data/plots'
 PLOT = False
 
 
@@ -57,7 +62,7 @@ def load_filtered_records(max_len=None):
 
     print("loading records..")
     pool = Pool()
-    for _ in tqdm(pool.imap(func=load_record, iterable=records_list), total=len(records_list)):
+    for _ in tqdm(pool.imap(func=create_record_dataset, iterable=records_list), total=len(records_list)):
         pass
     # for record_path in records_list:
     #     load_record(record_path)
@@ -73,15 +78,48 @@ def plot_win(wd, m, name):
         print(f"Bad plot: {name}")
         return
 
-    plt.savefig(f"{TEST_DIR}/plots/{name}.png")
+    plt.savefig(f"{PLOT_DIR}/{name}.png")
 
 
-def save_win(win, name):
-    with open(f"{TEST_DIR}/windows/{name}", 'wb') as file:
+def save_win(win, win_name):
+    with open(f"{WINDOWS_DIR}/{win_name}", 'wb') as file:
         pickle.dump(win, file)
 
 
-def load_record(record_path):
+def save_valid_windows(win, ppg_index, bp_index, record, i):
+    ppg_signal = win.p_signal[:, ppg_index]
+
+    try:
+        wd, m = hp.process(ppg_signal, record.fs)
+    except:
+        print(f"Bad record: {record.record_name} Win: {i}")
+        return
+
+    peaks_len = len(wd['peaklist'])
+    num_bad_peaks = np.count_nonzero(wd['RR_masklist'])
+    bad_peak_precent = (num_bad_peaks / peaks_len) * 100
+    win = Window(win, bp_index, ppg_index, wd, m)
+    if bad_peak_precent < 2:
+        win_name = f'good/{record.record_name}_{i}'
+        if PLOT:
+            plot_win(wd, m, name=win_name)
+        calculate_win_sqi(win)
+        save_win(win, win_name)
+    if bad_peak_precent > 80:
+        win_name = f'/bad/{record.record_name}_{i}'
+        if PLOT:
+            plot_win(wd, m, name=win_name)
+        calculate_win_sqi(win)
+        save_win(win, win_name)
+    if 48 < bad_peak_precent < 52:
+        win_name = f'/mid/{record.record_name}_{i}'
+        if PLOT:
+            plot_win(wd, m, name=win_name)
+        calculate_win_sqi(win)
+        save_win(win, win_name)
+
+
+def create_record_dataset(record_path):
     with open(record_path, 'rb') as file:
         record = pickle.load(file)
 
@@ -95,32 +133,7 @@ def load_record(record_path):
         ppg_index = record_windows[0].sig_name.index('PLETH')
         for i, win in enumerate(record_windows):
             if window_valid(win, bp_index, ppg_index):
-                ppg_signal = win.p_signal[:, ppg_index]
-                try:
-                    wd, m = hp.process(ppg_signal, record.fs)
-                except:
-                    print(f"Bad record: {record.record_name} Win: {i}")
-                    return
-                wd, m = hp.process(ppg_signal, record.fs, clean_rr=True)
-                peaks_len = len(wd['peaklist'])
-                num_bad_peaks = np.count_nonzero(wd['RR_masklist'])
-                bad_peak_precent = (num_bad_peaks / peaks_len) * 100
-                win = Window(win, bp_index, ppg_index, wd, m)
-                if bad_peak_precent < 2:
-                    save_name = f'/good/{record.record_name}_{i}'
-                    if PLOT:
-                        plot_win(wd, m, name=save_name)
-                    save_win(win, save_name)
-                if bad_peak_precent > 80:
-                    save_name = f'/bad/{record.record_name}_{i}'
-                    if PLOT:
-                        plot_win(wd, m, name=save_name)
-                    save_win(win, save_name)
-                if 48 < bad_peak_precent < 52:
-                    save_name = f'/mid/{record.record_name}_{i}'
-                    if PLOT:
-                        plot_win(wd, m, name=save_name)
-                    save_win(win, save_name)
+                save_valid_windows(win, ppg_index, bp_index, record, i)
 
 
 def save_records_list():
