@@ -13,13 +13,6 @@ from vital_sqi.sqi.standard_sqi import (
 )
 
 
-def load_and_calc_win(win_path):
-    with open(win_path, 'rb') as file:
-        window = pickle.load(file)
-
-    calculate_win_sqi(window)
-
-
 def calculate_win_sqi(window):
 
     ppg_signal = window.record.p_signal[:, window.ppg_index]
@@ -31,17 +24,3 @@ def calculate_win_sqi(window):
     window.snr_sqi = round(float(signal_to_noise_sqi(ppg_signal)), 4)
     window.k_sqi = round(kurtosis_sqi(ppg_signal), 4)
 
-
-def calc_windows_sqi():
-    windows_list = [os.path.join(path, name) for path, subdirs, files in os.walk(WINDOWS_DIR) for name in files]
-
-    for win_path in tqdm(windows_list):
-        load_and_calc_win(win_path)
-
-
-def main():
-    calc_windows_sqi()
-
-
-if __name__ == "__main__":
-    main()

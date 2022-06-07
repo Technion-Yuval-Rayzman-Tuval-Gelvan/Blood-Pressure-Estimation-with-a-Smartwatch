@@ -1,3 +1,4 @@
+import enum
 import glob
 import pickle
 from multiprocessing import Pool
@@ -26,12 +27,18 @@ from PreProcessing import remove_unrelevant_records, record_to_windows, window_v
 import os
 
 DB_DIR = 'mimic3wdb'
-BASE_DIR = '/host/media/tuvalgelvan@staff.technion.ac.il/HD34/Estimated-Blood-Pressure-Project/'
+BASE_DIR = '/host/media/tuvalgelvan@staff.technion.ac.il/HD34/Estimated-Blood-Pressure-Project'
 LOAD_DIR = f'{BASE_DIR}/mimic3wdb/1.0'
 TEST_DIR = f'{BASE_DIR}/test_data'
 WINDOWS_DIR = f'{BASE_DIR}/test_data/windows'
 PLOT_DIR = f'{BASE_DIR}/test_data/plots'
 PLOT = False
+
+
+class Label(enum.Enum):
+   good = 0
+   mid = 1
+   bad = 2
 
 
 class Window:
@@ -42,6 +49,7 @@ class Window:
         self.ppg_index = ppg_index
         self.working_data = wd
         self.measures = m
+        self.target = None
         self.s_sqi = None
         self.p_sqi = None
         self.m_sqi = None
@@ -52,13 +60,13 @@ class Window:
 
 
 # load database with ABP and PLETH signals
-def load_filtered_records(max_len=None):
+def create_records_dataset(start_point=0, end_point=0):
     # load list
     with open('records_list', 'rb') as file:
         records_list = pickle.load(file)
 
-    if max_len:
-        records_list = records_list[:max_len]
+    if end_point:
+        records_list = records_list[start_point:end_point]
 
     print("loading records..")
     pool = Pool()
@@ -81,6 +89,11 @@ def plot_win(wd, m, name):
     plt.savefig(f"{PLOT_DIR}/{name}.png")
 
 
+def make_dir(path):
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+
 def save_win(win, win_name):
     with open(f"{WINDOWS_DIR}/{win_name}", 'wb') as file:
         pickle.dump(win, file)
@@ -99,22 +112,32 @@ def save_valid_windows(win, ppg_index, bp_index, record, i):
     num_bad_peaks = np.count_nonzero(wd['RR_masklist'])
     bad_peak_precent = (num_bad_peaks / peaks_len) * 100
     win = Window(win, bp_index, ppg_index, wd, m)
-    if bad_peak_precent < 2:
+    bad_dir = f"{WINDOWS_DIR}/bad"
+    good_dir = f"{WINDOWS_DIR}/good"
+    mid_dir = f"{WINDOWS_DIR}/mid"
+    make_dir(good_dir)
+    make_dir(mid_dir)
+    make_dir(bad_dir)
+
+    if bad_peak_precent < 1:
         win_name = f'good/{record.record_name}_{i}'
         if PLOT:
             plot_win(wd, m, name=win_name)
+        win.target = Label.good
         calculate_win_sqi(win)
         save_win(win, win_name)
-    if bad_peak_precent > 80:
-        win_name = f'/bad/{record.record_name}_{i}'
+    if bad_peak_precent > 70:
+        win_name = f'bad/{record.record_name}_{i}'
         if PLOT:
             plot_win(wd, m, name=win_name)
+        win.target = Label.bad
         calculate_win_sqi(win)
         save_win(win, win_name)
-    if 48 < bad_peak_precent < 52:
-        win_name = f'/mid/{record.record_name}_{i}'
+    if 40 < bad_peak_precent < 55:
+        win_name = f'mid/{record.record_name}_{i}'
         if PLOT:
             plot_win(wd, m, name=win_name)
+        win.target = Label.mid
         calculate_win_sqi(win)
         save_win(win, win_name)
 
@@ -143,10 +166,39 @@ def save_records_list():
         pickle.dump(records_list, file)
 
 
+def load_win(win_path):
+    with open(win_path, 'rb') as file:
+        window = pickle.load(file)
+
+    return window
+
+
+def load_windows(path_dir):
+    windows_list = [os.path.join(path, name) for path, subdirs, files in os.walk(path_dir) for name in files]
+
+    windows = []
+    for win_path in tqdm(windows_list):
+        windows.append(load_win(win_path))
+
+    return windows
+
+
 def main():
-    max_len = 50
     # save_records_list()
-    load_filtered_records(max_len)
+
+    # start_point = 0
+    # end_point = 20
+    # create_records_dataset(start_point=start_point, end_point=end_point)
+
+    windows = load_windows(WINDOWS_DIR)
+    print(len(windows))
+    labels = []
+    sqi_data = []
+    for win in windows:
+        sqi_data.append(win.s_sqi)
+        labels.append(win.target)
+    print(labels)
+    print(sqi_data)
 
 
 if __name__ == "__main__":
