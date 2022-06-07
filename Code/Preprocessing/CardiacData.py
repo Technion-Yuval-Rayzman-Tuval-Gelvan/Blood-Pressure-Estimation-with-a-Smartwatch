@@ -5,6 +5,8 @@ import pickle
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from sklearn import svm, metrics
+from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 from vital_sqi.sqi.standard_sqi import (
     perfusion_sqi,
@@ -16,6 +18,7 @@ from vital_sqi.sqi.standard_sqi import (
     mean_crossing_rate_sqi
 )
 import heartpy as hp
+import seaborn as sns
 
 
 FREQUENCY = 256
@@ -188,29 +191,81 @@ def plot_signals(data):
         plt.show()
 
 
+def show_histogram(windows):
+    histogram = {}
+    for win in windows:
+        key = win.ppg_target.name
+        if key in histogram:
+            histogram[key] += 1
+        else:
+            histogram[key] = 1
+
+    print(f"histogram: {histogram}")
+
+
+def create_dataset(windows):
+
+    data = []
+    labels = []
+    for win in windows:
+        data.append([win.ppg_sqi.s_sqi, win.ppg_sqi.p_sqi])
+        labels.append(win.ppg_target.value)
+
+    data = np.array(data)
+    labels = np.array(labels)
+    # Split dataset into training set and test set
+    X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=0.2,
+                                                        random_state=109)  # 70% training and 30% test
+
+    print(X_test[0])
+    print(y_test[0])
+    print(len(X_train), len(X_test), len(y_train), len(y_test))
+
+    #Create a svm Classifier
+    clf = svm.SVC(kernel='linear') # Linear Kernel
+
+    #Train the model using the training sets
+    clf.fit(X_train, y_train)
+
+    #Predict the response for test dataset
+    y_pred = clf.predict(X_test)
+
+    # Model Accuracy: how often is the classifier correct?
+    print("Accuracy:", metrics.accuracy_score(y_test, y_pred))
+
+
+def make_meshgrid(x, y, h=.02):
+    x_min, x_max = x.min() - 1, x.max() + 1
+    y_min, y_max = y.min() - 1, y.max() + 1
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+    return xx, yy
+
+
+def plot_contours(ax, clf, xx, yy, **params):
+    Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
+    Z = Z.reshape(xx.shape)
+    out = ax.contourf(xx, yy, Z, **params)
+    return out
+
+
 def main():
     """get dictionary of records"""
-    data = load_files()
+    # data = load_files()
 
     """plot full signals"""
     # plot_signals(data)
 
     """save records as windows"""
-    preprocess_data(data)
+    # preprocess_data(data)
 
     """save records as windows"""
     windows = load_windows(WINDOWS_DIR)
-    labels = []
-    sqi_data = []
-    for win in windows:
-        sqi_data.append(win.ppg_sqi.s_sqi)
-        label = int(win.ppg_target)
-        labels.append(label)
 
-    n, bins, patches = plt.hist(x=labels, bins=5, color='#0504aa', rwidth=0.85)
-    print(n)
-    print(sqi_data)
+    """histogram of labels"""
+    # show_histogram(windows)
 
+    """create data set for training"""
+    create_dataset(windows)
 
 
 if __name__ == "__main__":
