@@ -71,13 +71,13 @@ class Window:
 def classify_target(signal_flags):
     quality_percent = (np.count_nonzero(signal_flags) / len(signal_flags)) * 100
 
-    if quality_percent > 90:
+    if quality_percent > 95:
         target = Label.very_good
-    elif quality_percent > 70:
+    elif quality_percent > 80:
         target = Label.good
-    elif quality_percent > 30:
+    elif quality_percent > 60:
         target = Label.mid
-    elif quality_percent > 10:
+    elif quality_percent > 40:
         target = Label.bad
     else:
         target = Label.very_bad
@@ -150,7 +150,7 @@ def preprocess_data(data):
             save_win(new_win, win_name=f'{name}_{win_counter}')
 
             if PLOT:
-                plot_win(win_ppg_signal, f'ppg_{name}_{win_counter}')
+                plot_win(win_ppg_signal, f'{win_ppg_target}_ppg_{name}_{win_counter}')
 
             win_counter += 1
 
@@ -189,21 +189,26 @@ def plot_signals(data):
 
 
 def main():
+    """get dictionary of records"""
     data = load_files()
+
+    """plot full signals"""
     # plot_signals(data)
+
+    """save records as windows"""
     preprocess_data(data)
+
+    """save records as windows"""
     windows = load_windows(WINDOWS_DIR)
-    print(len(windows))
     labels = []
     sqi_data = []
     for win in windows:
         sqi_data.append(win.ppg_sqi.s_sqi)
-        labels.append(win.ppg_target)
+        label = int(win.ppg_target)
+        labels.append(label)
 
-    hist, bin_edges = np.histogram(labels)
-    print(hist)
-
-    print(labels)
+    n, bins, patches = plt.hist(x=labels, bins=5, color='#0504aa', rwidth=0.85)
+    print(n)
     print(sqi_data)
 
 
