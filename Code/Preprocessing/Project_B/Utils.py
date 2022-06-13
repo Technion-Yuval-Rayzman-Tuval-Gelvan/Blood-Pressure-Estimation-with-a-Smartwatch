@@ -1,6 +1,8 @@
 import enum
 import os
 import pickle
+from multiprocessing import Pool
+
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import metrics, svm
@@ -67,8 +69,13 @@ def load_windows():
     windows_list = [os.path.join(path, name) for path, subdirs, files in os.walk(cfg.WINDOWS_DIR) for name in files]
 
     windows = []
-    for win_path in tqdm(windows_list):
-        windows.append(load_win(win_path))
+    print("loading windows..")
+    pool = Pool()
+    for window in tqdm(pool.imap(func=load_win, iterable=windows_list), total=len(windows_list)):
+        windows.append(window)
+
+    # for win_path in tqdm(windows_list):
+    #     windows.append(load_win(win_path))
 
     return windows
 
@@ -104,8 +111,8 @@ def create_dataset(windows):
     data = []
     labels = []
     for win in windows:
-        if win.ppg_target.value != 0:
-            data.append([win.ppg_sqi.e_sqi, win.ppg_sqi.p_sqi])
+        if win.ppg_target.value != 2:
+            data.append([win.ppg_sqi.s_sqi, win.ppg_sqi.p_sqi])
             labels.append(win.ppg_target.value)
 
     data = np.array(data)
@@ -122,6 +129,7 @@ def create_dataset(windows):
 
     #Predict the response for test dataset
     y_pred = clf.predict(X_test)
+    print(y_pred, y_test)
 
     # Model Accuracy: how often is the classifier correct?
     print("Accuracy:", metrics.accuracy_score(y_test, y_pred))

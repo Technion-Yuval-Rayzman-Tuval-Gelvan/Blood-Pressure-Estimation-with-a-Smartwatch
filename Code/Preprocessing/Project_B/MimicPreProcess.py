@@ -16,12 +16,14 @@ def create_records_dataset(num_records = 0):
         file_name = f'{cfg.MIN_RECORDS_PER_PATIENT}_records_per_patient_list'
     else:
         file_name = 'records_list'
+
     with open(file_name, 'rb') as file:
         records_list = pickle.load(file)
 
     if num_records:
         records_list = records_list[:num_records]
 
+    records_list = np.concatenate(np.array(records_list))
     print("loading records..")
     pool = Pool()
     for _ in tqdm(pool.imap(func=create_record_dataset, iterable=records_list), total=len(records_list)):
@@ -41,7 +43,7 @@ def record_to_windows(record):
     window_in_sec = 30
     end_point = start_point + (window_in_sec * fs)
     window_overlap = window_in_sec / 2
-    new_samples_per_step = np.int(window_overlap * fs)
+    new_samples_per_step = int(window_overlap * fs)
     record_windows = []
 
     while end_point < record.sig_len:
@@ -85,6 +87,9 @@ def save_valid_windows(win, ppg_index, bp_index, record, i):
     name = record.record_name
     win_ppg_target = classify_target(win_ppg_signal, record.fs, f'{name}_{i}')
     win_bp_target = classify_target(win_bp_signal, record.fs, f'{name}_{i}')
+    if win_ppg_target is None or win_bp_target is None:
+        return
+
     win_ppg_sqi = utils.SQI()
     win_ppg_sqi.calculate_sqi(win_ppg_signal)
     win_bp_sqi = utils.SQI()
@@ -114,7 +119,7 @@ def create_record_dataset(record_path):
         for i, win in enumerate(record_windows):
             bp_signal = win.p_signal[:, bp_index]
             ppg_signal = win.p_signal[:, ppg_index]
-            if np.count_nonzero(np.isnan(ppg_signal)) or np.count_nonzero(np.isnan(bp_signal)):
+            if not np.count_nonzero(np.isnan(ppg_signal)) and not np.count_nonzero(np.isnan(bp_signal)):
                 save_valid_windows(win, ppg_index, bp_index, record, i)
 
 
@@ -129,8 +134,10 @@ def save_good_records_list():
     records_list = []
     for path, subdirs, files in os.walk(cfg.MIMIC_LOAD_DIR):
         if len(files) >= cfg.MIN_RECORDS_PER_PATIENT:
+            files_list = []
             for name in files:
-                records_list.append(os.path.join(path, name))
+                files_list.append(os.path.join(path, name))
+            records_list.append(files_list)
     # save list
     with open(f'{cfg.MIN_RECORDS_PER_PATIENT}_records_per_patient_list', 'wb') as file:
         pickle.dump(records_list, file)

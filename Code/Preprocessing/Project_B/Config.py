@@ -16,7 +16,7 @@ MODELS = {'svm': svm,
 # ------------------------------------------------
 #                   CONFIG
 # ------------------------------------------------
-DATASET = Dataset.cardiac
+DATASET = Dataset.mimic
 PLOT = True
 MIN_RECORDS_PER_PATIENT = 1000
 
@@ -28,10 +28,10 @@ MIMIC_LOAD_DIR = f'{BASE_DIR}/mimic3wdb/1.0'
 CARDIAC_LOAD_DIR = f'{BASE_DIR}/cardiac_data/Technion_Synched_Data'
 
 if DATASET == Dataset.mimic:
-    DATA_DIR = f'{BASE_DIR}/cardiac_data'
+    DATA_DIR = f'{BASE_DIR}/test_data'
     FREQUENCY = 125
 else:
-    DATA_DIR = f'{BASE_DIR}/test_data'
+    DATA_DIR = f'{BASE_DIR}/cardiac_data'
     FREQUENCY = 256
 
 WINDOWS_DIR = f'{DATA_DIR}/windows'
