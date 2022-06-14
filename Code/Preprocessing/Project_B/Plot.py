@@ -20,19 +20,18 @@ plt.rcParams['axes.grid'] = True  # Show grid by default in figures
 #                 'corr': [],
 #                 'label': [],
 #                 }
-def histogram(dataset):
+def features_histogram(dataset):
 
-    if not os.path.exists(f'{cfg.DATA_DIR}/histogram_plots'):
-        os.mkdir(f'{cfg.DATA_DIR}/histogram_plots')
-
+    output_dir = cfg.HIST_DIR
     feature_list = ['s_sqi', 'p_sqi', 'm_sqi', 'e_sqi', 'z_sqi', 'snr_sqi', 'k_sqi', 'corr']
 
     ## Plotting the histograms
-    fig, ax_list = plt.subplots(4, 5, figsize=(10, 8))
+    fig, ax_list = plt.subplots(4, 2, figsize=(10, 8))
     for i, feature in enumerate(feature_list):
         ax = ax_list.flat[i]
-        ax.hist(dataset.query('label == "male"')[feature].values, bins=20, alpha=0.5, label='Male')
-        ax.hist(dataset.query('label == "female"')[feature].values, bins=20, alpha=0.5, label='Female')
+        ax.hist(dataset.query('label == "Label.bad"')[feature].values, bins=20, alpha=0.5, label='bad')
+        ax.hist(dataset.query('label == "Label.mid"')[feature].values, bins=20, alpha=0.5, label='mid')
+        ax.hist(dataset.query('label == "Label.good"')[feature].values, bins=20, alpha=0.5, label='good')
         ax.set_title(feature)
 
     for ax_list2 in ax_list:
@@ -40,8 +39,16 @@ def histogram(dataset):
 
     ax_list.flat[-1].legend()
     plt.tight_layout()
-    fig.savefig('./output/voices_distributions.png', dpi=240)
+    fig.savefig(f'{output_dir}/features_hist.png', dpi=240)
 
 
+def label_histogram(dataset):
+    fig, ax = plt.subplots()
+    dataset.groupby('label').size().plot.bar(ax=ax)
+    ax.set_title('Label')
+    ax.set_xlabel('Label')
+    ax.set_ylabel('Number of samples')
+    plt.tight_layout()
 
+    fig.savefig(f'{cfg.HIST_DIR}/labels_hist.png', dpi=240)
 

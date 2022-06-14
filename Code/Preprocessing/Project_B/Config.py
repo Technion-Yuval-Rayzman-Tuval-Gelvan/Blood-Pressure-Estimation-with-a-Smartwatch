@@ -16,8 +16,8 @@ MODELS = {'svm': svm,
 # ------------------------------------------------
 #                   CONFIG
 # ------------------------------------------------
-DATASET = Dataset.mimic
-PLOT = True
+DATASET = Dataset.cardiac
+PLOT = False
 MIN_RECORDS_PER_PATIENT = 1000
 TRAIN_RECORDS_PER_PATIENT = 100
 
@@ -37,6 +37,12 @@ else:
 
 WINDOWS_DIR = f'{DATA_DIR}/windows'
 PLOT_DIR =  f'{DATA_DIR}/windows_plots'
+HIST_DIR = f'{DATA_DIR}/histogram_plots'
+DIRS_LIST = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR]
+
+for output_dir in DIRS_LIST:
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
 
 # ------------------------------------------------
 #                Init and Defines

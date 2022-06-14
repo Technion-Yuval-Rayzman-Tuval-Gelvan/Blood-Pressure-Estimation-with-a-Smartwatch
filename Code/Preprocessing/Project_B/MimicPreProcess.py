@@ -7,7 +7,7 @@ from tqdm import tqdm
 import heartpy as hp
 import Utils as utils
 import Config as cfg
-
+import Plot as plot
 
 # load database with ABP and PLETH signals
 def create_records_dataset(num_patients = 0):
@@ -63,12 +63,11 @@ def record_to_windows(record):
     return record_windows
 
 
-def classify_target(signal, fs, name):
+def classify_target(signal, fs):
 
     try:
         wd, m = hp.process(signal, fs)
     except:
-        print(f"Bad record: {name}")
         return
 
     peaks_len = len(wd['peaklist'])
@@ -90,8 +89,8 @@ def save_valid_windows(win, ppg_index, bp_index, record, i):
     win_bp_signal = win.p_signal[:, bp_index]
 
     name = record.record_name
-    win_ppg_target = classify_target(win_ppg_signal, record.fs, f'{name}_{i}')
-    win_bp_target = classify_target(win_bp_signal, record.fs, f'{name}_{i}')
+    win_ppg_target = classify_target(win_ppg_signal, record.fs)
+    win_bp_target = classify_target(win_bp_signal, record.fs)
     if win_ppg_target is None or win_bp_target is None:
         return
 
@@ -166,6 +165,8 @@ def main():
 
     """histogram of labels"""
     utils.show_histogram(windows)
+    dataset = utils.windows_to_dict(windows)
+    plot.label_histogram(dataset)
 
     """create data set for training"""
     utils.create_dataset(windows)

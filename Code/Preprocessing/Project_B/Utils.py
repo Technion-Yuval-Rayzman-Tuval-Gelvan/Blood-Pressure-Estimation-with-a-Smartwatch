@@ -144,7 +144,6 @@ def create_dataset(windows):
 
     #Predict the response for test dataset
     y_pred = clf.predict(X_test)
-    print(y_pred, y_test)
 
     # Model Accuracy: how often is the classifier correct?
     print("Accuracy:", metrics.accuracy_score(y_test, y_pred))
@@ -173,7 +172,7 @@ def create_dataset(windows):
     plt.show()
 
 
-def windows_to_dict(windows):
+def windows_to_dict(windows, is_ppg=True):
     win_dict = {'s_sqi': [],
                 'p_sqi': [],
                 'm_sqi': [],
@@ -186,13 +185,19 @@ def windows_to_dict(windows):
                 }
 
     for window in windows:
-        win_dict['s_sqi'].append(window.s_sqi)
-        win_dict['p_sqi'].append(window.p_sqi)
-        win_dict['e_sqi'].append(window.e_sqi)
-        win_dict['m_sqi'].append(window.m_sqi)
-        win_dict['snr_sqi'].append(window.snr_sqi)
-        win_dict['k_sqi'].append(window.k_sqi)
-        win_dict['corr'].append(window.corr)
-        win_dict['label'].append(window.label)
+
+        if is_ppg:
+            win_sqi = window.ppg_sqi
+        else:
+            win_sqi = window.bp_sqi
+
+        win_dict['s_sqi'].append(win_sqi.s_sqi)
+        win_dict['p_sqi'].append(win_sqi.p_sqi)
+        win_dict['e_sqi'].append(win_sqi.e_sqi)
+        win_dict['m_sqi'].append(win_sqi.m_sqi)
+        win_dict['snr_sqi'].append(win_sqi.snr_sqi)
+        win_dict['k_sqi'].append(win_sqi.k_sqi)
+        win_dict['corr'].append(win_sqi.corr)
+        win_dict['label'].append(win_sqi.label)
 
     return win_dict

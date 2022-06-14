@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import Utils as utils
 import Config as cfg
-
+import Plot as plot
 
 def classify_target(signal_flags):
     quality_percent = (np.count_nonzero(signal_flags) / len(signal_flags)) * 100
@@ -105,22 +105,24 @@ def main():
     assert cfg.DATASET == cfg.Dataset.cardiac
 
     """get dictionary of records"""
-    data = load_files()
+    # data = load_files()
 
     """plot full signals"""
     # plot_signals(data)
 
     """save records as windows"""
-    preprocess_data(data)
+    # preprocess_data(data)
 
     """load windows"""
     windows = utils.load_windows()
 
     """histogram of labels"""
     utils.show_histogram(windows)
+    dataset = utils.windows_to_dict(windows)
+    plot.label_histogram(dataset)
 
     """create data set for training"""
-    utils.create_dataset(windows)
+    # utils.create_dataset(windows)
 
 
 if __name__ == "__main__":
