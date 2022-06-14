@@ -16,7 +16,7 @@ MODELS = {'svm': svm,
 # ------------------------------------------------
 #                   CONFIG
 # ------------------------------------------------
-DATASET = Dataset.cardiac
+DATASET = Dataset.mimic
 PLOT = True
 MIN_RECORDS_PER_PATIENT = 1000
 TRAIN_RECORDS_PER_PATIENT = 100

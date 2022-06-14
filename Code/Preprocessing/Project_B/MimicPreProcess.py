@@ -153,10 +153,10 @@ def main():
     assert cfg.DATASET == cfg.Dataset.mimic
 
     """save list of records"""
-    if cfg.MIN_RECORDS_PER_PATIENT > 0:
-        save_good_records_list()
-    else:
-        save_records_list()
+    # if cfg.MIN_RECORDS_PER_PATIENT > 0:
+    #     save_good_records_list()
+    # else:
+    #     save_records_list()
 
     """save records as windows"""
     create_records_dataset(num_patients=20)
