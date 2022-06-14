@@ -16,9 +16,10 @@ MODELS = {'svm': svm,
 # ------------------------------------------------
 #                   CONFIG
 # ------------------------------------------------
-DATASET = Dataset.mimic
+DATASET = Dataset.cardiac
 PLOT = True
 MIN_RECORDS_PER_PATIENT = 1000
+TRAIN_RECORDS_PER_PATIENT = 100
 
 # ------------------------------------------------
 #                   Directories
@@ -35,7 +36,7 @@ else:
     FREQUENCY = 256
 
 WINDOWS_DIR = f'{DATA_DIR}/windows'
-PLOT_DIR =  f'{DATA_DIR}/plots'
+PLOT_DIR =  f'{DATA_DIR}/windows_plots'
 
 # ------------------------------------------------
 #                Init and Defines

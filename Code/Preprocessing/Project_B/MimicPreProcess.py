@@ -10,9 +10,9 @@ import Config as cfg
 
 
 # load database with ABP and PLETH signals
-def create_records_dataset(num_records = 0):
+def create_records_dataset(num_patients = 0):
     # load list
-    if cfg.MIN_RECORDS_PER_PATIENT > 0 :
+    if cfg.MIN_RECORDS_PER_PATIENT > 0:
         file_name = f'{cfg.MIN_RECORDS_PER_PATIENT}_records_per_patient_list'
     else:
         file_name = 'records_list'
@@ -20,13 +20,18 @@ def create_records_dataset(num_records = 0):
     with open(file_name, 'rb') as file:
         records_list = pickle.load(file)
 
-    if num_records:
-        records_list = records_list[:num_records]
+    records_list = records_list[:num_patients]
 
-    records_list = np.concatenate(np.array(records_list))
+    sampled_records_list = []
+    for patient_records in records_list:
+        sampled_records = np.random.choice(np.array(patient_records), cfg.TRAIN_RECORDS_PER_PATIENT)
+        sampled_records_list.append(sampled_records)
+
+    sampled_records_list = np.concatenate(np.array(sampled_records_list))
+
     print("loading records..")
     pool = Pool()
-    for _ in tqdm(pool.imap(func=create_record_dataset, iterable=records_list), total=len(records_list)):
+    for _ in tqdm(pool.imap(func=create_record_dataset, iterable=sampled_records_list), total=len(sampled_records_list)):
         pass
     # for record_path in records_list:
     #     load_record(record_path)
@@ -154,7 +159,7 @@ def main():
         save_records_list()
 
     """save records as windows"""
-    create_records_dataset(num_records=20)
+    create_records_dataset(num_patients=20)
 
     """load windows"""
     windows = utils.load_windows()

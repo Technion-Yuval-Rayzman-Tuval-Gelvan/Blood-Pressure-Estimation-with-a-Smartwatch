@@ -111,7 +111,7 @@ def create_dataset(windows):
     data = []
     labels = []
     for win in windows:
-        if win.ppg_target.value != 2:
+        if win.ppg_target.value != 1:
             data.append([win.ppg_sqi.s_sqi, win.ppg_sqi.p_sqi])
             labels.append(win.ppg_target.value)
 
@@ -122,7 +122,7 @@ def create_dataset(windows):
                                                         random_state=109)  # 80% training and 20% test
 
     #Create a svm Classifier
-    clf = svm.SVC(kernel='linear') # Linear Kernel
+    clf = svm.SVC(kernel='linear', class_weight='balanced') # Linear Kernel
 
     #Train the model using the training sets
     clf.fit(X_train, y_train)
