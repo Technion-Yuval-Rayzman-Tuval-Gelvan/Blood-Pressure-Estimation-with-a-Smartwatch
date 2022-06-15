@@ -9,7 +9,8 @@ from sklearn import metrics, svm
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 from vital_sqi.sqi.standard_sqi import (perfusion_sqi, kurtosis_sqi, skewness_sqi,
-    entropy_sqi, signal_to_noise_sqi, zero_crossings_rate_sqi, mean_crossing_rate_sqi)
+                                        entropy_sqi, signal_to_noise_sqi, zero_crossings_rate_sqi,
+                                        mean_crossing_rate_sqi)
 import heartpy as hp
 import Config as cfg
 
@@ -74,8 +75,11 @@ def save_win(win, win_name):
 
 
 def load_win(win_path):
-    with open(win_path, 'rb') as file:
-        window = pickle.load(file)
+    try:
+        with open(win_path, 'rb') as file:
+            window = pickle.load(file)
+    except:
+        return None
 
     return window
 
@@ -85,12 +89,15 @@ def load_windows():
 
     windows = []
     print("loading windows..")
-    pool = Pool()
-    for window in tqdm(pool.imap(func=load_win, iterable=windows_list), total=len(windows_list)):
-        windows.append(window)
+    # pool = Pool()
+    # for window in tqdm(pool.imap(func=load_win, iterable=windows_list), total=len(windows_list)):
+    #     if window is not None:
+    #         windows.append(window)
 
-    # for win_path in tqdm(windows_list):
-    #     windows.append(load_win(win_path))
+    for win_path in tqdm(windows_list):
+        window = load_win(win_path)
+        if window is not None:
+            windows.append(window)
 
     return windows
 
@@ -122,7 +129,6 @@ def show_histogram(windows):
 
 
 def create_dataset(windows):
-
     data = []
     labels = []
     for win in windows:
@@ -136,13 +142,13 @@ def create_dataset(windows):
     X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=0.2,
                                                         random_state=109)  # 80% training and 20% test
 
-    #Create a svm Classifier
-    clf = svm.SVC(kernel='linear', class_weight='balanced') # Linear Kernel
+    # Create a svm Classifier
+    clf = svm.SVC(kernel='linear', class_weight='balanced')  # Linear Kernel
 
-    #Train the model using the training sets
+    # Train the model using the training sets
     clf.fit(X_train, y_train)
 
-    #Predict the response for test dataset
+    # Predict the response for test dataset
     y_pred = clf.predict(X_test)
 
     # Model Accuracy: how often is the classifier correct?
@@ -188,16 +194,19 @@ def windows_to_dict(windows, is_ppg=True):
 
         if is_ppg:
             win_sqi = window.ppg_sqi
+            win_label = window.ppg_target
         else:
             win_sqi = window.bp_sqi
+            win_label = window.bp_target
 
         win_dict['s_sqi'].append(win_sqi.s_sqi)
         win_dict['p_sqi'].append(win_sqi.p_sqi)
         win_dict['e_sqi'].append(win_sqi.e_sqi)
         win_dict['m_sqi'].append(win_sqi.m_sqi)
+        win_dict['z_sqi'].append(win_sqi.z_sqi)
         win_dict['snr_sqi'].append(win_sqi.snr_sqi)
         win_dict['k_sqi'].append(win_sqi.k_sqi)
-        win_dict['corr'].append(win_sqi.corr)
-        win_dict['label'].append(win_sqi.label)
+        win_dict['corr'].append(win_sqi.corr_sqi)
+        win_dict['label'].append(win_label.value)
 
     return win_dict

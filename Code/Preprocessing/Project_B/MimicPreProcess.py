@@ -158,7 +158,7 @@ def main():
     #     save_records_list()
 
     """save records as windows"""
-    create_records_dataset(num_patients=20)
+    # create_records_dataset(num_patients=20)
 
     """load windows"""
     windows = utils.load_windows()
@@ -167,6 +167,7 @@ def main():
     utils.show_histogram(windows)
     dataset = utils.windows_to_dict(windows)
     plot.label_histogram(dataset)
+    plot.features_histogram(dataset)
 
     """create data set for training"""
     utils.create_dataset(windows)

@@ -120,6 +120,7 @@ def main():
     utils.show_histogram(windows)
     dataset = utils.windows_to_dict(windows)
     plot.label_histogram(dataset)
+    plot.features_histogram(dataset)
 
     """create data set for training"""
     # utils.create_dataset(windows)
