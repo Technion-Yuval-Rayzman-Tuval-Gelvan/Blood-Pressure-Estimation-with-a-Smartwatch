@@ -73,10 +73,12 @@ def classify_target(signal, fs):
     peaks_len = len(wd['peaklist'])
     num_bad_peaks = np.count_nonzero(wd['RR_masklist'])
     quality_percent = (1 - (num_bad_peaks / peaks_len)) * 100
+    high_tresh = int(cfg.EXP_DIR.split("_")[-2])
+    low_tresh = int(cfg.EXP_DIR.split("_")[-1])
 
-    if quality_percent > 90:
+    if quality_percent >= high_tresh:
         target = utils.Label.good
-    elif quality_percent > 60:
+    elif quality_percent >= low_tresh:
         target = utils.Label.mid
     else:
         target = utils.Label.bad
@@ -158,16 +160,18 @@ def main():
     #     save_records_list()
 
     """save records as windows"""
-    # create_records_dataset(num_patients=20)
+    create_records_dataset(num_patients=20)
 
     """load windows"""
-    windows = utils.load_windows()
+    # windows = utils.load_windows()
+    win_dict = utils.load_windows()
+    utils.save_dict(win_dict)
 
     """histogram of labels"""
-    utils.show_histogram(windows)
-    dataset = utils.windows_to_dict(windows)
-    plot.label_histogram(dataset)
-    plot.features_histogram(dataset)
+    # utils.show_histogram(windows)
+    # dataset = utils.windows_to_dict(windows)
+    plot.label_histogram(win_dict)
+    plot.features_histogram(win_dict)
 
     """create data set for training"""
     utils.create_dataset(windows)

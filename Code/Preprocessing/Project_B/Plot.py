@@ -27,13 +27,24 @@ def features_histogram(dataset):
     output_dir = cfg.HIST_DIR
     feature_list = ['s_sqi', 'p_sqi', 'm_sqi', 'e_sqi', 'z_sqi', 'snr_sqi', 'k_sqi', 'corr']
     dataset = pd.DataFrame(dataset)
+
     ## Plotting the histograms
     fig, ax_list = plt.subplots(2, 4, figsize=(10, 8))
     for i, feature in enumerate(feature_list):
         ax = ax_list.flat[i]
-        ax.hist(dataset.query('label == 2')[feature].values, bins=20, alpha=0.6, label='bad')
-        ax.hist(dataset.query('label == 1')[feature].values, bins=20, alpha=0.6, label='mid')
-        # ax.hist(dataset.query('label == 0')[feature].values, bins=20, alpha=0.6, label='good')
+        len_bad = len(dataset.query('label == 2')[feature].values)
+        len_mid = len(dataset.query('label == 1')[feature].values)
+        len_good = len(dataset.query('label == 0')[feature].values)
+        good_weight = 1 - (len_good / (len_mid + len_bad + len_good))
+        mid_weight = 1 - (len_mid / (len_mid + len_bad + len_good))
+        bad_weight = 1 - (len_bad / (len_mid + len_bad + len_good))
+        good_weights = [good_weight for i in range(len_good)]
+        mid_weights = [mid_weight for i in range(len_mid)]
+        bad_weights = [bad_weight for i in range(len_bad)]
+
+        ax.hist(dataset.query('label == 2')[feature].values, bins=20, alpha=0.6, label='bad', weights=bad_weights)
+        ax.hist(dataset.query('label == 1')[feature].values, bins=20, alpha=0.6, label='mid', weights=mid_weights)
+        ax.hist(dataset.query('label == 0')[feature].values, bins=20, alpha=0.6, label='good', weights=good_weights)
         ax.set_title(feature)
 
     for ax_list2 in ax_list:

@@ -16,10 +16,13 @@ MODELS = {'svm': svm,
 # ------------------------------------------------
 #                   CONFIG
 # ------------------------------------------------
+# DATASET = Dataset.mimic
 DATASET = Dataset.cardiac
 PLOT = False
-MIN_RECORDS_PER_PATIENT = 1000
-TRAIN_RECORDS_PER_PATIENT = 100
+MIN_RECORDS_PER_PATIENT = 1000  # take only patients with more records
+TRAIN_RECORDS_PER_PATIENT = 100  # how many records to take from each patient for training
+# EXP_DIR = 'thresh_90_60'
+EXP_DIR = 'thresh_100_90'
 
 # ------------------------------------------------
 #                   Directories
@@ -29,14 +32,14 @@ MIMIC_LOAD_DIR = f'{BASE_DIR}/mimic3wdb/1.0'
 CARDIAC_LOAD_DIR = f'{BASE_DIR}/cardiac_data/Technion_Synched_Data'
 
 if DATASET == Dataset.mimic:
-    DATA_DIR = f'{BASE_DIR}/test_data'
+    DATA_DIR = f'{BASE_DIR}/mimic_data/{EXP_DIR}'
     FREQUENCY = 125
 else:
-    DATA_DIR = f'{BASE_DIR}/cardiac_data'
+    DATA_DIR = f'{BASE_DIR}/cardiac_data/{EXP_DIR}'
     FREQUENCY = 256
 
 WINDOWS_DIR = f'{DATA_DIR}/windows'
-PLOT_DIR =  f'{DATA_DIR}/windows_plots'
+PLOT_DIR = f'{DATA_DIR}/windows_plots'
 HIST_DIR = f'{DATA_DIR}/histogram_plots'
 DIRS_LIST = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR]
 
@@ -52,4 +55,3 @@ USER_CMD = None
 #                Init and Defines
 # ------------------------------------------------
 USER_CMD = None
-

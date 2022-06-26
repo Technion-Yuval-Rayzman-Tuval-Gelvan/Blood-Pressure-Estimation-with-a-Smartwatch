@@ -8,10 +8,12 @@ import Plot as plot
 
 def classify_target(signal_flags):
     quality_percent = (np.count_nonzero(signal_flags) / len(signal_flags)) * 100
+    high_tresh = int(cfg.EXP_DIR.split("_")[-2])
+    low_tresh = int(cfg.EXP_DIR.split("_")[-1])
 
-    if quality_percent > 90:
+    if quality_percent >= high_tresh:
         target = utils.Label.good
-    elif quality_percent > 60:
+    elif quality_percent >= low_tresh:
         target = utils.Label.mid
     else:
         target = utils.Label.bad
@@ -105,13 +107,13 @@ def main():
     assert cfg.DATASET == cfg.Dataset.cardiac
 
     """get dictionary of records"""
-    # data = load_files()
+    data = load_files()
 
     """plot full signals"""
     # plot_signals(data)
 
     """save records as windows"""
-    # preprocess_data(data)
+    preprocess_data(data)
 
     """load windows"""
     windows = utils.load_windows()

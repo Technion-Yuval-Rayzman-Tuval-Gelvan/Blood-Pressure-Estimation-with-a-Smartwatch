@@ -2,7 +2,6 @@ import enum
 import os
 import pickle
 from multiprocessing import Pool
-
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import metrics, svm
@@ -74,6 +73,11 @@ def save_win(win, win_name):
         pickle.dump(win, file)
 
 
+def save_dict(dict):
+    with open(f"{cfg.DATA_DIR}/window_dict", 'wb') as file:
+        pickle.dump(dict, file)
+
+
 def load_win(win_path):
     try:
         with open(win_path, 'rb') as file:
@@ -86,8 +90,18 @@ def load_win(win_path):
 
 def load_windows():
     windows_list = [os.path.join(path, name) for path, subdirs, files in os.walk(cfg.WINDOWS_DIR) for name in files]
+    win_dict = {'s_sqi': [],
+                'p_sqi': [],
+                'm_sqi': [],
+                'e_sqi': [],
+                'z_sqi': [],
+                'snr_sqi': [],
+                'k_sqi': [],
+                'corr': [],
+                'label': [],
+                }
 
-    windows = []
+    # windows = []
     print("loading windows..")
     # pool = Pool()
     # for window in tqdm(pool.imap(func=load_win, iterable=windows_list), total=len(windows_list)):
@@ -97,9 +111,9 @@ def load_windows():
     for win_path in tqdm(windows_list):
         window = load_win(win_path)
         if window is not None:
-            windows.append(window)
+            add_window_to_dict(window, win_dict)
 
-    return windows
+    return win_dict
 
 
 def plot_win(win, name):
@@ -178,6 +192,25 @@ def create_dataset(windows):
     plt.show()
 
 
+def add_window_to_dict(window, win_dict, is_ppg=True):
+    if is_ppg:
+        win_sqi = window.ppg_sqi
+        win_label = window.ppg_target
+    else:
+        win_sqi = window.bp_sqi
+        win_label = window.bp_target
+
+    win_dict['s_sqi'].append(win_sqi.s_sqi)
+    win_dict['p_sqi'].append(win_sqi.p_sqi)
+    win_dict['e_sqi'].append(win_sqi.e_sqi)
+    win_dict['m_sqi'].append(win_sqi.m_sqi)
+    win_dict['z_sqi'].append(win_sqi.z_sqi)
+    win_dict['snr_sqi'].append(win_sqi.snr_sqi)
+    win_dict['k_sqi'].append(win_sqi.k_sqi)
+    win_dict['corr'].append(win_sqi.corr_sqi)
+    win_dict['label'].append(win_label.value)
+
+
 def windows_to_dict(windows, is_ppg=True):
     win_dict = {'s_sqi': [],
                 'p_sqi': [],
@@ -192,21 +225,6 @@ def windows_to_dict(windows, is_ppg=True):
 
     for window in windows:
 
-        if is_ppg:
-            win_sqi = window.ppg_sqi
-            win_label = window.ppg_target
-        else:
-            win_sqi = window.bp_sqi
-            win_label = window.bp_target
-
-        win_dict['s_sqi'].append(win_sqi.s_sqi)
-        win_dict['p_sqi'].append(win_sqi.p_sqi)
-        win_dict['e_sqi'].append(win_sqi.e_sqi)
-        win_dict['m_sqi'].append(win_sqi.m_sqi)
-        win_dict['z_sqi'].append(win_sqi.z_sqi)
-        win_dict['snr_sqi'].append(win_sqi.snr_sqi)
-        win_dict['k_sqi'].append(win_sqi.k_sqi)
-        win_dict['corr'].append(win_sqi.corr_sqi)
-        win_dict['label'].append(win_label.value)
+        add_window_to_dict(window, win_dict, is_ppg)
 
     return win_dict
