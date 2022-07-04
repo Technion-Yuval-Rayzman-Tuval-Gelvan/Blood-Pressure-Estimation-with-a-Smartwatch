@@ -1,6 +1,7 @@
 import enum
 import os
 from sklearn import svm
+from datetime import datetime
 
 
 class Dataset(enum.Enum):
@@ -19,10 +20,13 @@ MODELS = {'svm': svm,
 # DATASET = Dataset.mimic
 DATASET = Dataset.cardiac
 PLOT = False
+MAX_PLOT_PER_LABEL = 10
 MIN_RECORDS_PER_PATIENT = 1000  # take only patients with more records
-TRAIN_RECORDS_PER_PATIENT = 100  # how many records to take from each patient for training
-# EXP_DIR = 'thresh_90_60'
-EXP_DIR = 'thresh_100_90'
+TRAIN_RECORDS_PER_PATIENT = 10  # how many records to take from each patient for training
+HIGH_THRESH = 100
+LOW_THRESH = 70
+WINDOWS_PER_LABEL = 8000
+EXP_DIR = f'thresh_{HIGH_THRESH}_{LOW_THRESH}'
 
 # ------------------------------------------------
 #                   Directories
@@ -41,7 +45,12 @@ else:
 WINDOWS_DIR = f'{DATA_DIR}/windows'
 PLOT_DIR = f'{DATA_DIR}/windows_plots'
 HIST_DIR = f'{DATA_DIR}/histogram_plots'
+SVM_DIR = f'{DATA_DIR}/svm_plots'
 DIRS_LIST = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR]
+
+# datetime object containing current date and time
+now = datetime.now()
+TIME = now.strftime("%d/%m/%Y_%H_%M_%S")
 
 for output_dir in DIRS_LIST:
     if not os.path.exists(output_dir):

@@ -78,6 +78,11 @@ def save_dict(dict):
         pickle.dump(dict, file)
 
 
+def load_dict():
+    with open(f"{cfg.DATA_DIR}/window_dict", 'r') as file:
+        pickle.load(file)
+
+
 def load_win(win_path):
     try:
         with open(win_path, 'rb') as file:
@@ -99,6 +104,7 @@ def load_windows():
                 'k_sqi': [],
                 'corr': [],
                 'label': [],
+                'signal': [],
                 }
 
     # windows = []
@@ -142,63 +148,15 @@ def show_histogram(windows):
     print(f"histogram: {histogram}")
 
 
-def create_dataset(windows):
-    data = []
-    labels = []
-    for win in windows:
-        if win.ppg_target.value != 1:
-            data.append([win.ppg_sqi.s_sqi, win.ppg_sqi.p_sqi])
-            labels.append(win.ppg_target.value)
-
-    data = np.array(data)
-    labels = np.array(labels)
-    # Split dataset into training set and test set
-    X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=0.2,
-                                                        random_state=109)  # 80% training and 20% test
-
-    # Create a svm Classifier
-    clf = svm.SVC(kernel='linear', class_weight='balanced')  # Linear Kernel
-
-    # Train the model using the training sets
-    clf.fit(X_train, y_train)
-
-    # Predict the response for test dataset
-    y_pred = clf.predict(X_test)
-
-    # Model Accuracy: how often is the classifier correct?
-    print("Accuracy:", metrics.accuracy_score(y_test, y_pred))
-
-    # create a mesh to plot in
-    h = .02
-    x_min, x_max = X_train[:, 0].min() - 1, X_train[:, 0].max() + 1
-    y_min, y_max = X_train[:, 1].min() - 1, X_train[:, 1].max() + 1
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
-                         np.arange(y_min, y_max, h))
-    Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
-
-    # Put the result into a color plot
-    Z = Z.reshape(xx.shape)
-    plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm, alpha=0.8)
-
-    # Plot also the training points
-    plt.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=plt.cm.coolwarm)
-    plt.xlabel('Sepal length')
-    plt.ylabel('Sepal width')
-    plt.xlim(xx.min(), xx.max())
-    plt.ylim(yy.min(), yy.max())
-    plt.xticks(())
-    plt.yticks(())
-    plt.legend()
-    plt.show()
-
-
 def add_window_to_dict(window, win_dict, is_ppg=True):
     if is_ppg:
         win_sqi = window.ppg_sqi
         win_label = window.ppg_target
+        win_signal = window.ppg_signal
     else:
         win_sqi = window.bp_sqi
         win_label = window.bp_target
+        win_signal = window.bp_signal
 
     win_dict['s_sqi'].append(win_sqi.s_sqi)
     win_dict['p_sqi'].append(win_sqi.p_sqi)
@@ -209,6 +167,7 @@ def add_window_to_dict(window, win_dict, is_ppg=True):
     win_dict['k_sqi'].append(win_sqi.k_sqi)
     win_dict['corr'].append(win_sqi.corr_sqi)
     win_dict['label'].append(win_label.value)
+    win_dict['signal'].append(win_signal)
 
 
 def windows_to_dict(windows, is_ppg=True):

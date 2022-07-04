@@ -5,11 +5,12 @@ from tqdm import tqdm
 import Utils as utils
 import Config as cfg
 import Plot as plot
+import SVM
 
 def classify_target(signal_flags):
     quality_percent = (np.count_nonzero(signal_flags) / len(signal_flags)) * 100
-    high_tresh = int(cfg.EXP_DIR.split("_")[-2])
-    low_tresh = int(cfg.EXP_DIR.split("_")[-1])
+    high_tresh = int(cfg.HIGH_THRESH)
+    low_tresh = int(cfg.LOW_THRESH)
 
     if quality_percent >= high_tresh:
         target = utils.Label.good
@@ -22,7 +23,7 @@ def classify_target(signal_flags):
 
 
 def preprocess_data(data):
-
+    plot_counters = {}
     for name, record in tqdm(data.items()):
         ppg_signal = np.array(record['IR'])
         bp_signal = np.array(record['Aline'])
@@ -64,7 +65,11 @@ def preprocess_data(data):
             utils.save_win(new_win, win_name=f'{name}_{win_counter}')
 
             if cfg.PLOT:
-                utils.plot_win(win_ppg_signal, f'{win_ppg_target}_ppg_{name}_{win_counter}')
+                if plot_counters[win_ppg_target] > cfg.MAX_PLOT_PER_LABEL:
+                    continue
+                else:
+                    plot_counters[win_ppg_target] += 1
+                    utils.plot_win(win_ppg_signal, f'{win_ppg_target}_ppg_{name}_{win_counter}')
 
             win_counter += 1
 
@@ -107,25 +112,28 @@ def main():
     assert cfg.DATASET == cfg.Dataset.cardiac
 
     """get dictionary of records"""
-    data = load_files()
+    # data = load_files()
 
     """plot full signals"""
     # plot_signals(data)
 
     """save records as windows"""
-    preprocess_data(data)
+    # preprocess_data(data)
 
     """load windows"""
-    windows = utils.load_windows()
+    win_dict = utils.load_windows()
+    utils.save_dict(win_dict)
+
+    """load_windows_dictionary"""
+    # win_dict = utils.load_dict()
 
     """histogram of labels"""
-    utils.show_histogram(windows)
-    dataset = utils.windows_to_dict(windows)
-    plot.label_histogram(dataset)
-    plot.features_histogram(dataset)
+    # plot.label_histogram(win_dict)
+    # plot.features_histogram(win_dict)
 
     """create data set for training"""
-    # utils.create_dataset(windows)
+    svm = SVM.SVM(true_label = utils.Label.good, false_label= utils.Label.mid)
+    svm.run(win_dict)
 
 
 if __name__ == "__main__":

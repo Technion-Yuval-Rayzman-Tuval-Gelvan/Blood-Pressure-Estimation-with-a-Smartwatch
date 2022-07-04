@@ -8,9 +8,14 @@ import heartpy as hp
 import Utils as utils
 import Config as cfg
 import Plot as plot
+import SVM
+
+
+num_windows = 0
+
 
 # load database with ABP and PLETH signals
-def create_records_dataset(num_patients = 0):
+def create_records_dataset(num_patients=0):
     # load list
     if cfg.MIN_RECORDS_PER_PATIENT > 0:
         file_name = f'{cfg.MIN_RECORDS_PER_PATIENT}_records_per_patient_list'
@@ -31,7 +36,8 @@ def create_records_dataset(num_patients = 0):
 
     print("loading records..")
     pool = Pool()
-    for _ in tqdm(pool.imap(func=create_record_dataset, iterable=sampled_records_list), total=len(sampled_records_list)):
+    for _ in tqdm(pool.imap(func=create_record_dataset, iterable=sampled_records_list),
+                  total=len(sampled_records_list)):
         pass
     # for record_path in records_list:
     #     load_record(record_path)
@@ -64,7 +70,6 @@ def record_to_windows(record):
 
 
 def classify_target(signal, fs):
-
     try:
         wd, m = hp.process(signal, fs)
     except:
@@ -73,8 +78,8 @@ def classify_target(signal, fs):
     peaks_len = len(wd['peaklist'])
     num_bad_peaks = np.count_nonzero(wd['RR_masklist'])
     quality_percent = (1 - (num_bad_peaks / peaks_len)) * 100
-    high_tresh = int(cfg.EXP_DIR.split("_")[-2])
-    low_tresh = int(cfg.EXP_DIR.split("_")[-1])
+    high_tresh = int(cfg.HIGH_THRESH)
+    low_tresh = int(cfg.LOW_THRESH)
 
     if quality_percent >= high_tresh:
         target = utils.Label.good
@@ -102,12 +107,9 @@ def save_valid_windows(win, ppg_index, bp_index, record, i):
     win_bp_sqi.calculate_sqi(win_bp_signal)
 
     new_win = utils.Window(record, win_ppg_signal, win_bp_signal, win_ppg_target,
-                     win_bp_target, win_bp_sqi, win_ppg_sqi)
+                           win_bp_target, win_bp_sqi, win_ppg_sqi)
 
     utils.save_win(new_win, win_name=f'{name}_{i}')
-
-    if cfg.PLOT:
-        utils.plot_win(win_ppg_signal, f'{win_ppg_target}_ppg_{name}_{i}')
 
 
 def create_record_dataset(record_path):
@@ -119,6 +121,7 @@ def create_record_dataset(record_path):
         return valid_windows
 
     record_windows = record_to_windows(record)
+
     if len(record_windows) != 0:
         bp_index = record_windows[0].sig_name.index('ABP')
         ppg_index = record_windows[0].sig_name.index('PLETH')
@@ -149,8 +152,19 @@ def save_good_records_list():
         pickle.dump(records_list, file)
 
 
-def main():
+def plot_windows(win_dict):
+    plot_counters = {}
+    signals = win_dict['signal']
+    labels = win_dict['label']
+    for i in range(len(labels)):
+        if plot_counters[labels[i]] > cfg.MAX_PLOT_PER_LABEL:
+            continue
+        else:
+            plot_counters[labels[i]] += 1
+            utils.plot_win(signals[i], f'{labels[i]}_ppg_{i}')
 
+
+def main():
     assert cfg.DATASET == cfg.Dataset.mimic
 
     """save list of records"""
@@ -163,18 +177,23 @@ def main():
     create_records_dataset(num_patients=20)
 
     """load windows"""
-    # windows = utils.load_windows()
     win_dict = utils.load_windows()
     utils.save_dict(win_dict)
 
+    """load_windows_dictionary"""
+    # win_dict = utils.load_dict()
+
+    # plot windows
+    if cfg.PLOT:
+        plot_windows(win_dict)
+
     """histogram of labels"""
-    # utils.show_histogram(windows)
-    # dataset = utils.windows_to_dict(windows)
     plot.label_histogram(win_dict)
     plot.features_histogram(win_dict)
 
     """create data set for training"""
-    utils.create_dataset(windows)
+    svm = SVM.SVM(true_label = utils.Label.good, false_label= utils.Label.mid)
+
 
 
 if __name__ == "__main__":
