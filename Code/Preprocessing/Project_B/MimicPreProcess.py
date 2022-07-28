@@ -1,6 +1,6 @@
 import copy
 import pickle
-from multiprocessing import Pool
+from multiprocessing import Pool, Lock
 import numpy as np
 import os
 from tqdm import tqdm
@@ -11,36 +11,92 @@ import Plot as plot
 import SVM
 
 
-num_windows = 0
+class DatasetCreator:
+
+    def __init__(self):
+        self.windows_list = []
+
+    # load database with ABP and PLETH signals
+    def create_records_dataset(self):
+
+        # load list
+        if cfg.MIN_RECORDS_PER_PATIENT > 0:
+            file_name = f'{cfg.MIN_RECORDS_PER_PATIENT}_records_per_patient_list'
+        else:
+            file_name = 'records_list'
+
+        with open(file_name, 'rb') as file:
+            records_list = pickle.load(file)
+
+        records_list = records_list[:cfg.NUM_PATIENTS]
+
+        sampled_records_list = []
+        for patient_records in records_list:
+            # np.random.seed(5)
+            sampled_records = np.random.choice(np.array(patient_records), cfg.TRAIN_RECORDS_PER_PATIENT)
+            sampled_records_list.append(sampled_records)
+
+        sampled_records_list = np.concatenate(np.array(sampled_records_list))
+
+        print("loading records..")
+        pool = Pool()
+        for record_windows in tqdm(pool.imap(func=self.create_record_dataset, iterable=sampled_records_list),
+                                   total=len(sampled_records_list)):
+            self.windows_list += record_windows
 
 
-# load database with ABP and PLETH signals
-def create_records_dataset(num_patients=0):
-    # load list
-    if cfg.MIN_RECORDS_PER_PATIENT > 0:
-        file_name = f'{cfg.MIN_RECORDS_PER_PATIENT}_records_per_patient_list'
-    else:
-        file_name = 'records_list'
+    def create_record_dataset(self, record_path):
+        with open(record_path, 'rb') as file:
+            record = pickle.load(file)
 
-    with open(file_name, 'rb') as file:
-        records_list = pickle.load(file)
+        valid_windows = []
+        if record.record_name[-1] == 'n':
+            return valid_windows
 
-    records_list = records_list[:num_patients]
+        record_windows = record_to_windows(record)
 
-    sampled_records_list = []
-    for patient_records in records_list:
-        sampled_records = np.random.choice(np.array(patient_records), cfg.TRAIN_RECORDS_PER_PATIENT)
-        sampled_records_list.append(sampled_records)
+        if len(record_windows) != 0:
+            bp_index = record_windows[0].sig_name.index('ABP')
+            ppg_index = record_windows[0].sig_name.index('PLETH')
+            for i, win in enumerate(record_windows):
+                bp_signal = win.p_signal[:, bp_index]
+                ppg_signal = win.p_signal[:, ppg_index]
+                if not np.count_nonzero(np.isnan(ppg_signal)) and not np.count_nonzero(np.isnan(bp_signal)):
+                    new_win = self.save_valid_windows(win, ppg_index, bp_index, record, i)
+                    if new_win is not None:
+                        valid_windows.append(new_win)
 
-    sampled_records_list = np.concatenate(np.array(sampled_records_list))
+        return valid_windows
 
-    print("loading records..")
-    pool = Pool()
-    for _ in tqdm(pool.imap(func=create_record_dataset, iterable=sampled_records_list),
-                  total=len(sampled_records_list)):
-        pass
-    # for record_path in records_list:
-    #     load_record(record_path)
+    def save_valid_windows(self, win, ppg_index, bp_index, record, i):
+
+        win_ppg_signal = win.p_signal[:, ppg_index]
+        win_bp_signal = win.p_signal[:, bp_index]
+
+        name = record.record_name
+        win_ppg_target = classify_target(win_ppg_signal, record.fs)
+        win_bp_target = classify_target(win_bp_signal, record.fs)
+        if win_ppg_target is None or win_bp_target is None:
+            return
+
+        win_ppg_sqi = utils.SQI()
+        win_ppg_sqi.calculate_sqi(win_ppg_signal)
+        win_bp_sqi = utils.SQI()
+        win_bp_sqi.calculate_sqi(win_bp_signal)
+
+        new_win = utils.Window(win_ppg_signal, win_bp_signal, win_ppg_target,
+                               win_bp_target, win_bp_sqi, win_ppg_sqi, win_name=f'{name}_{i}')
+
+        return new_win
+
+    def save_windows_list(self):
+        print(self.windows_list)
+        utils.save_list(self.windows_list)
+        # utils.save_win(new_win, win_name=f'{name}_{i}')
+
+    def create_dataset(self):
+        self.create_records_dataset()
+        self.save_windows_list()
 
 
 def make_dir(path):
@@ -91,47 +147,6 @@ def classify_target(signal, fs):
     return target
 
 
-def save_valid_windows(win, ppg_index, bp_index, record, i):
-    win_ppg_signal = win.p_signal[:, ppg_index]
-    win_bp_signal = win.p_signal[:, bp_index]
-
-    name = record.record_name
-    win_ppg_target = classify_target(win_ppg_signal, record.fs)
-    win_bp_target = classify_target(win_bp_signal, record.fs)
-    if win_ppg_target is None or win_bp_target is None:
-        return
-
-    win_ppg_sqi = utils.SQI()
-    win_ppg_sqi.calculate_sqi(win_ppg_signal)
-    win_bp_sqi = utils.SQI()
-    win_bp_sqi.calculate_sqi(win_bp_signal)
-
-    new_win = utils.Window(record, win_ppg_signal, win_bp_signal, win_ppg_target,
-                           win_bp_target, win_bp_sqi, win_ppg_sqi)
-
-    utils.save_win(new_win, win_name=f'{name}_{i}')
-
-
-def create_record_dataset(record_path):
-    with open(record_path, 'rb') as file:
-        record = pickle.load(file)
-
-    valid_windows = []
-    if record.record_name[-1] == 'n':
-        return valid_windows
-
-    record_windows = record_to_windows(record)
-
-    if len(record_windows) != 0:
-        bp_index = record_windows[0].sig_name.index('ABP')
-        ppg_index = record_windows[0].sig_name.index('PLETH')
-        for i, win in enumerate(record_windows):
-            bp_signal = win.p_signal[:, bp_index]
-            ppg_signal = win.p_signal[:, ppg_index]
-            if not np.count_nonzero(np.isnan(ppg_signal)) and not np.count_nonzero(np.isnan(bp_signal)):
-                save_valid_windows(win, ppg_index, bp_index, record, i)
-
-
 def save_records_list():
     records_list = [os.path.join(path, name) for path, subdirs, files in os.walk(cfg.MIMIC_LOAD_DIR) for name in files]
     # save list
@@ -152,7 +167,6 @@ def save_good_records_list():
         pickle.dump(records_list, file)
 
 
-
 def main():
     assert cfg.DATASET == cfg.Dataset.mimic
 
@@ -163,34 +177,31 @@ def main():
     #     save_records_list()
 
     """save records as windows"""
-    # create_records_dataset(num_patients=20)
+    # dataset_creator = DatasetCreator()
+    # dataset_creator.create_dataset()
 
-    """load windows"""
-    win_dict = utils.load_windows()
-    # utils.save_dict(win_dict)
+    # """load_windows_dictionary"""
+    win_list = utils.load_list()
 
-    """load_windows_dictionary"""
-    win_dict = utils.load_dict()
-
-    """plot windows"""
-    if cfg.PLOT:
-        utils.plot_windows(win_dict)
-
-    """histogram of labels"""
-    # plot.label_histogram(win_dict)
-    # plot.features_histogram(win_dict)
-
-    """SVM - good/mid"""
-    svm = SVM.SVM(true_label = utils.Label.good, false_label= utils.Label.mid)
-    svm.run(win_dict)
-
-    """SVM - good/bad"""
-    svm = SVM.SVM(true_label=utils.Label.good, false_label=utils.Label.bad)
-    svm.run(win_dict)
-
-    """SVM - mid/bad"""
-    svm = SVM.SVM(true_label=utils.Label.mid, false_label=utils.Label.bad)
-    svm.run(win_dict)
+    # """plot windows"""
+    # if cfg.PLOT:
+    #     utils.plot_windows(win_list)
+    #
+    # """histogram of labels"""
+    # # plot.label_histogram(win_list)
+    # # plot.features_histogram(win_list)
+    #
+    # """SVM - good/mid"""
+    # svm = SVM.SVM(true_label=utils.Label.good, false_label=utils.Label.mid)
+    # svm.run(win_dict)
+    #
+    # """SVM - good/bad"""
+    # svm = SVM.SVM(true_label=utils.Label.good, false_label=utils.Label.bad)
+    # svm.run(win_dict)
+    #
+    # """SVM - mid/bad"""
+    # svm = SVM.SVM(true_label=utils.Label.mid, false_label=utils.Label.bad)
+    # svm.run(win_dict)
 
 
 if __name__ == "__main__":

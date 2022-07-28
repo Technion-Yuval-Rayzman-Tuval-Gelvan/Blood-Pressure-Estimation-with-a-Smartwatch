@@ -112,10 +112,10 @@ def main():
 
     """load windows"""
     # win_dict = utils.load_windows()
-    # utils.save_dict(win_dict)
+    # utils.save_list(win_dict)
 
     """load_windows_dictionary"""
-    win_dict = utils.load_dict()
+    win_dict = utils.load_list()
 
     """plot windows"""
     if cfg.PLOT:

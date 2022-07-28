@@ -45,14 +45,14 @@ class SQI:
 
 class Window:
 
-    def __init__(self, record, ppg_signal, bp_signal, ppg_target, bp_target, bp_sqi, ppg_sqi):
-        self.record = record
+    def __init__(self, ppg_signal, bp_signal, ppg_target, bp_target, bp_sqi, ppg_sqi, win_name):
         self.bp_signal = bp_signal
         self.ppg_signal = ppg_signal
         self.ppg_target = ppg_target
         self.bp_target = bp_target
         self.bp_sqi = bp_sqi
         self.ppg_sqi = ppg_sqi
+        self.win_name = win_name
 
 
 def calculate_corr_sqi(signal):
@@ -73,15 +73,15 @@ def save_win(win, win_name):
         pickle.dump(win, file)
 
 
-def save_dict(dict):
-    with open(f"{cfg.DATA_DIR}/window_dict", 'wb') as file:
-        pickle.dump(dict, file)
+def save_list(list):
+    with open(f"{cfg.DATA_DIR}/windows_list", 'wb') as file:
+        pickle.dump(list, file)
 
 
-def load_dict():
-    with open(f"{cfg.DATA_DIR}/window_dict", 'rb') as file:
-        win_dict = pickle.load(file)
-    return win_dict
+def load_list():
+    with open(f"{cfg.DATA_DIR}/windows_list", 'rb') as file:
+        win_list = pickle.load(file)
+    return win_list
 
 
 def load_win(win_path):
@@ -95,18 +95,7 @@ def load_win(win_path):
 
 
 def load_windows():
-    windows_list = [os.path.join(path, name) for path, subdirs, files in os.walk(cfg.WINDOWS_DIR) for name in files]
-    # win_dict = {'s_sqi': [],
-    #             'p_sqi': [],
-    #             'm_sqi': [],
-    #             'e_sqi': [],
-    #             'z_sqi': [],
-    #             'snr_sqi': [],
-    #             'k_sqi': [],
-    #             'corr': [],
-    #             'label': [],
-    #             'signal': [],
-    #             }
+    # windows_list = [os.path.join(path, name) for path, subdirs, files in os.walk(cfg.WINDOWS_DIR) for name in files]
 
     # windows = []
     print("loading windows..")
