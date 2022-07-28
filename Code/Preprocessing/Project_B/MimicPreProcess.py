@@ -28,7 +28,8 @@ class DatasetCreator:
         with open(file_name, 'rb') as file:
             records_list = pickle.load(file)
 
-        records_list = records_list[:cfg.NUM_PATIENTS]
+        if not cfg.ALL_PATIENTS:
+            records_list = records_list[:cfg.NUM_PATIENTS]
 
         sampled_records_list = []
         for patient_records in records_list:
@@ -183,6 +184,7 @@ def main():
     # """load_windows_dictionary"""
     win_list = utils.load_list()
 
+    # TODO: change win dict to win list in the following methods:
     # """plot windows"""
     # if cfg.PLOT:
     #     utils.plot_windows(win_list)

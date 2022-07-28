@@ -107,6 +107,7 @@ def main():
     """plot full signals"""
     # plot_signals(data)
 
+    # TODO: change win dict to win list in the following methods:
     """save records as windows"""
     # preprocess_data(data)
 

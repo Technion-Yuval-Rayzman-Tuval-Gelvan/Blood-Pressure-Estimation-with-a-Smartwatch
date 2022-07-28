@@ -22,8 +22,9 @@ DATASET = Dataset.mimic
 PLOT = False
 MAX_PLOT_PER_LABEL = 10
 MIN_RECORDS_PER_PATIENT = 1000  # take only patients with more records
-TRAIN_RECORDS_PER_PATIENT = 10  # how many records to take from each patient for training
+TRAIN_RECORDS_PER_PATIENT = 50  # how many records to take from each patient for training
 NUM_PATIENTS = 5
+ALL_PATIENTS = True
 HIGH_THRESH = 100
 LOW_THRESH = 70
 WINDOWS_PER_LABEL = 8000
@@ -40,9 +41,6 @@ CARDIAC_LOAD_DIR = f'{BASE_DIR}/cardiac_data/Technion_Synched_Data'
 # datetime object containing current date and time
 now = datetime.now()
 TIME = now.strftime("%d_%m_%Y_%H_%M_%S")
-
-# Lock for multiprocessing
-lock = Lock()
 
 if DATASET == Dataset.mimic:
     DATA_DIR = f'{BASE_DIR}/mimic_data/{EXP_DIR}'
