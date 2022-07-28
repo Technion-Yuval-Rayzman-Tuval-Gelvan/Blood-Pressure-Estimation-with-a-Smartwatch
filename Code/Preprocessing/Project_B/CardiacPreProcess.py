@@ -23,7 +23,6 @@ def classify_target(signal_flags):
 
 
 def preprocess_data(data):
-    plot_counters = {}
     for name, record in tqdm(data.items()):
         ppg_signal = np.array(record['IR'])
         bp_signal = np.array(record['Aline'])
@@ -63,15 +62,6 @@ def preprocess_data(data):
             new_win = utils.Window(record, win_ppg_signal, win_bp_signal, win_ppg_target,
                              win_bp_target, win_bp_sqi, win_ppg_sqi)
             utils.save_win(new_win, win_name=f'{name}_{win_counter}')
-
-            if cfg.PLOT:
-                if plot_counters[win_ppg_target] > cfg.MAX_PLOT_PER_LABEL:
-                    continue
-                else:
-                    plot_counters[win_ppg_target] += 1
-                    utils.plot_win(win_ppg_signal, f'{win_ppg_target}_ppg_{name}_{win_counter}')
-
-            win_counter += 1
 
 
 def load_files():
@@ -121,18 +111,30 @@ def main():
     # preprocess_data(data)
 
     """load windows"""
-    win_dict = utils.load_windows()
-    utils.save_dict(win_dict)
+    # win_dict = utils.load_windows()
+    # utils.save_dict(win_dict)
 
     """load_windows_dictionary"""
-    # win_dict = utils.load_dict()
+    win_dict = utils.load_dict()
+
+    """plot windows"""
+    if cfg.PLOT:
+        utils.plot_windows(win_dict)
 
     """histogram of labels"""
     # plot.label_histogram(win_dict)
     # plot.features_histogram(win_dict)
 
-    """create data set for training"""
+    """SVM - good/mid"""
     svm = SVM.SVM(true_label = utils.Label.good, false_label= utils.Label.mid)
+    svm.run(win_dict)
+
+    """SVM - good/bad"""
+    svm = SVM.SVM(true_label=utils.Label.good, false_label=utils.Label.bad)
+    svm.run(win_dict)
+
+    """SVM - mid/bad"""
+    svm = SVM.SVM(true_label=utils.Label.mid, false_label=utils.Label.bad)
     svm.run(win_dict)
 
 

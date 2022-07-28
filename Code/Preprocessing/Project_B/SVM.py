@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from sklearn import svm, metrics
+from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 import Utils as utils
@@ -30,8 +31,7 @@ class SVM:
 
     def create_dataset(self, full_dataset):
         full_dataset = pd.DataFrame(full_dataset)
-        dataset = full_dataset.query('label == self.true_label.value || label == self.false_label.value')
-        print(dataset)
+        dataset = full_dataset.query(f'label == {self.true_label.value} or label == {self.false_label.value}')
 
         n_samples = len(dataset)
 
@@ -58,27 +58,25 @@ class SVM:
         self.val_set = dataset.iloc[val_indices]
         self.test_set = dataset.iloc[test_indices]
 
-    def plot_prediction(self, x_train, y_train):
-        mean = x_train.mean(axis=0, keepdims=True)
-        std = x_train.std(axis=0, keepdims=True)
+    def plot_prediction(self, x_train, y_train, mean, std):
         dist = ((x_train - mean) / std) @ self.svc.coef_.T + self.svc.intercept_
 
         fig, ax = plt.subplots(1, 1, figsize=(10, 4))
         ax.set_ylabel(self.true_label.name)
         ax.hist(dist[(y_train == 1)], np.arange(-10, 10, 0.1), alpha=0.5, label=self.true_label.name)
         ax.hist(dist[(y_train == -1)], np.arange(-10, 10, 0.1), alpha=0.5, label=self.false_label.name)
-        max_y_value = np.max(len(y_train[y_train == 1]), len(y_train[y_train == -1])) + 10
-        ax.plot([-1, -1], [0, max_y_value], '--k')
-        ax.plot([0, 0], [0, max_y_value], 'k')
-        ax.plot([1, 1], [0, max_y_value], '--k')
+
+        ax.plot([-1, -1], [0, 25], '--k')
+        ax.plot([0, 0], [0, 25], 'k')
+        ax.plot([1, 1], [0, 25], '--k')
 
         ax.set_xlim(-10, 10)
         ax.set_title('$w^Tx+b$')
         ax.legend()
         plt.tight_layout(rect=[0, 0, 1, 0.9])
-        fig.savefig(f'{cfg.SVM_DIR}/svm_{self.true_label.name}_{self.false_label.name}_{cfg.TIME}.png', dpi=240)
+        fig.savefig(f'{cfg.SVM_DIR}/svm_{self.true_label.name}_{self.false_label.name}.png', dpi=240)
 
-    def adjust_c_value(self, x_train, y_train, x_val, y_val, x_test, y_test, x_train_full, y_train_full):
+    def adjust_c_value(self, x_train, y_train, x_val, y_val, x_test, y_test, x_train_full, y_train_full, mean, std):
         ## Define the list of C values to test
         c_list = np.logspace(-3, 3, 13)
 
@@ -90,7 +88,10 @@ class SVM:
         ## Train and evaluate the algorithm for each C
         for i_c, c in enumerate(c_list):
             svc = SVC(C=c, kernel='linear')
-            svc.fit((x_train - mean) / std, y_train)
+            std[np.where(std == 0)] = 1
+            mean[np.where(std == 0)] = 0
+            x_norm = (x_train - mean) / std
+            svc.fit(x_norm, y_train)
 
             predictions = svc.predict((x_val - mean) / std)
             risk_array[i_c] = (y_val != predictions).mean()
@@ -99,14 +100,14 @@ class SVM:
         optimal_index = np.argmin(risk_array)
         optimal_c = c_list[optimal_index]
 
-        print(f'The optimal C is {optimal_c}')
+        # print(f'The optimal C is {optimal_c}')
 
         ## Re-learn and evalute the model with the optimal C
-        svc = SVC(C=optimal_c, kernel='linear')
-        svc.fit((x_train_full - mean) / std, y_train_full)
+        self.svc = SVC(C=optimal_c, kernel='linear')
+        self.svc.fit((x_train_full - mean) / std, y_train_full)
         predictions = svc.predict((x_test - mean) / std)
         test_loss = (y_test != predictions).mean()
-        print(f'The test loss is: {test_loss:.2}')
+        # print(f'The test loss is: {test_loss:.2}')
 
         ## PLot risk vs. C
         fig, ax = plt.subplots()
@@ -116,7 +117,7 @@ class SVM:
         ax.set_xlabel('$K$')
         ax.set_ylabel('Risk')
         ax.set_title('Risk vs. $C$');
-        fig.savefig(f'{cfg.SVM_DIR}/voices_selecting_c_{self.true_label.name}_{self.false_label.name}_{cfg.TIME}.png', dpi=240)
+        fig.savefig(f'{cfg.SVM_DIR}/selecting_c_{self.true_label.name}_{self.false_label.name}.png', dpi=240)
 
     def run(self, dataset):
 
@@ -137,16 +138,30 @@ class SVM:
         self.svc = SVC(C=1.0, kernel='linear', class_weight='balanced')
 
         ## Run the learning algorithm
-        self.svc.fit((x_train - mean) / std, y_train)
+        std[np.where(std == 0)] = 1
+        mean[np.where(std == 0)] = 0
+        x_norm = (x_train - mean) / std
+        self.svc.fit(x_norm, y_train)
 
         ## Evaluate in the test set
         predictions = self.svc.predict((x_test - mean) / std)
         test_loss = (y_test != predictions).mean()
-        print(f'The test loss is: {test_loss:.3}')
 
-        self.plot_prediction(x_train, y_train)
+        classification_report_actual = classification_report(y_test, predictions)
+        print(classification_report_actual)
+        print(test_loss)
 
-        self.adjust_c_value(x_train, y_train, x_val, y_val, x_test, y_test, x_train_full, y_train_full)
+        self.plot_prediction(x_train, y_train, mean, std)
+
+        self.adjust_c_value(x_train, y_train, x_val, y_val, x_test, y_test, x_train_full, y_train_full, mean, std)
+
+        # print("Weights Coefficients:")
+        coef_dict = {}
+        for i, coef in enumerate(self.svc.coef_[0]):
+            coef_dict[self.feature_list[i]] = coef
+
+        print(coef_dict)
+
 
 
 

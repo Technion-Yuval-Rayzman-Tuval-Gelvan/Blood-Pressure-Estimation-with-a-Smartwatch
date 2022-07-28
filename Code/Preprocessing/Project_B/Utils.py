@@ -79,8 +79,9 @@ def save_dict(dict):
 
 
 def load_dict():
-    with open(f"{cfg.DATA_DIR}/window_dict", 'r') as file:
-        pickle.load(file)
+    with open(f"{cfg.DATA_DIR}/window_dict", 'rb') as file:
+        win_dict = pickle.load(file)
+    return win_dict
 
 
 def load_win(win_path):
@@ -95,17 +96,17 @@ def load_win(win_path):
 
 def load_windows():
     windows_list = [os.path.join(path, name) for path, subdirs, files in os.walk(cfg.WINDOWS_DIR) for name in files]
-    win_dict = {'s_sqi': [],
-                'p_sqi': [],
-                'm_sqi': [],
-                'e_sqi': [],
-                'z_sqi': [],
-                'snr_sqi': [],
-                'k_sqi': [],
-                'corr': [],
-                'label': [],
-                'signal': [],
-                }
+    # win_dict = {'s_sqi': [],
+    #             'p_sqi': [],
+    #             'm_sqi': [],
+    #             'e_sqi': [],
+    #             'z_sqi': [],
+    #             'snr_sqi': [],
+    #             'k_sqi': [],
+    #             'corr': [],
+    #             'label': [],
+    #             'signal': [],
+    #             }
 
     # windows = []
     print("loading windows..")
@@ -120,6 +121,18 @@ def load_windows():
             add_window_to_dict(window, win_dict)
 
     return win_dict
+
+
+def plot_windows(win_dict):
+    plot_counters = {0: 0, 1: 0, 2: 0}
+    signals = win_dict['signal']
+    labels = win_dict['label']
+    for i in range(len(labels)):
+        if plot_counters[labels[i]] > cfg.MAX_PLOT_PER_LABEL:
+            continue
+        else:
+            plot_counters[labels[i]] += 1
+            plot_win(signals[i], f'{Label(labels[i])}_ppg_{i}')
 
 
 def plot_win(win, name):
@@ -148,8 +161,8 @@ def show_histogram(windows):
     print(f"histogram: {histogram}")
 
 
-def add_window_to_dict(window, win_dict, is_ppg=True):
-    if is_ppg:
+def add_window_to_dict(window, win_dict):
+    if cfg.SIGNAL_TYPE == 'ppg':
         win_sqi = window.ppg_sqi
         win_label = window.ppg_target
         win_signal = window.ppg_signal
@@ -158,32 +171,14 @@ def add_window_to_dict(window, win_dict, is_ppg=True):
         win_label = window.bp_target
         win_signal = window.bp_signal
 
-    win_dict['s_sqi'].append(win_sqi.s_sqi)
-    win_dict['p_sqi'].append(win_sqi.p_sqi)
-    win_dict['e_sqi'].append(win_sqi.e_sqi)
-    win_dict['m_sqi'].append(win_sqi.m_sqi)
-    win_dict['z_sqi'].append(win_sqi.z_sqi)
-    win_dict['snr_sqi'].append(win_sqi.snr_sqi)
-    win_dict['k_sqi'].append(win_sqi.k_sqi)
-    win_dict['corr'].append(win_sqi.corr_sqi)
+    # win_dict['s_sqi'].append(win_sqi.s_sqi)
+    # win_dict['p_sqi'].append(win_sqi.p_sqi)
+    # win_dict['e_sqi'].append(win_sqi.e_sqi)
+    # win_dict['m_sqi'].append(win_sqi.m_sqi)
+    # win_dict['z_sqi'].append(win_sqi.z_sqi)
+    # win_dict['snr_sqi'].append(win_sqi.snr_sqi)
+    # win_dict['k_sqi'].append(win_sqi.k_sqi)
+    # win_dict['corr'].append(win_sqi.corr_sqi)
+    win_dict['bp_sqi']
     win_dict['label'].append(win_label.value)
     win_dict['signal'].append(win_signal)
-
-
-def windows_to_dict(windows, is_ppg=True):
-    win_dict = {'s_sqi': [],
-                'p_sqi': [],
-                'm_sqi': [],
-                'e_sqi': [],
-                'z_sqi': [],
-                'snr_sqi': [],
-                'k_sqi': [],
-                'corr': [],
-                'label': [],
-                }
-
-    for window in windows:
-
-        add_window_to_dict(window, win_dict, is_ppg)
-
-    return win_dict

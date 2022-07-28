@@ -152,17 +152,6 @@ def save_good_records_list():
         pickle.dump(records_list, file)
 
 
-def plot_windows(win_dict):
-    plot_counters = {}
-    signals = win_dict['signal']
-    labels = win_dict['label']
-    for i in range(len(labels)):
-        if plot_counters[labels[i]] > cfg.MAX_PLOT_PER_LABEL:
-            continue
-        else:
-            plot_counters[labels[i]] += 1
-            utils.plot_win(signals[i], f'{labels[i]}_ppg_{i}')
-
 
 def main():
     assert cfg.DATASET == cfg.Dataset.mimic
@@ -174,26 +163,34 @@ def main():
     #     save_records_list()
 
     """save records as windows"""
-    create_records_dataset(num_patients=20)
+    # create_records_dataset(num_patients=20)
 
     """load windows"""
     win_dict = utils.load_windows()
-    utils.save_dict(win_dict)
+    # utils.save_dict(win_dict)
 
     """load_windows_dictionary"""
-    # win_dict = utils.load_dict()
+    win_dict = utils.load_dict()
 
-    # plot windows
+    """plot windows"""
     if cfg.PLOT:
-        plot_windows(win_dict)
+        utils.plot_windows(win_dict)
 
     """histogram of labels"""
-    plot.label_histogram(win_dict)
-    plot.features_histogram(win_dict)
+    # plot.label_histogram(win_dict)
+    # plot.features_histogram(win_dict)
 
-    """create data set for training"""
+    """SVM - good/mid"""
     svm = SVM.SVM(true_label = utils.Label.good, false_label= utils.Label.mid)
+    svm.run(win_dict)
 
+    """SVM - good/bad"""
+    svm = SVM.SVM(true_label=utils.Label.good, false_label=utils.Label.bad)
+    svm.run(win_dict)
+
+    """SVM - mid/bad"""
+    svm = SVM.SVM(true_label=utils.Label.mid, false_label=utils.Label.bad)
+    svm.run(win_dict)
 
 
 if __name__ == "__main__":
