@@ -5,7 +5,7 @@ from tqdm import tqdm
 import Utils as utils
 import Config as cfg
 import Plot as plot
-import SVM
+import Trainer
 
 def classify_target(signal_flags):
     quality_percent = (np.count_nonzero(signal_flags) / len(signal_flags)) * 100

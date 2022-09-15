@@ -10,19 +10,29 @@ from sklearn.svm import SVC
 import Utils as utils
 import Config as cfg
 import Plot as plot
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.model_selection import cross_val_score
+from sklearn import datasets
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
 
 
-class SVM:
+class Trainer:
 
-    def __init__(self, true_label, false_label):
+    def __init__(self, true_label, false_label, win_dict):
         self.train_full_set = None
         self.train_set = None
         self.val_set = None
         self.test_set = None
         self.svc = None
+        self.lda = None
         self.true_label = true_label
         self.false_label = false_label
         self.feature_list = ['s_sqi', 'p_sqi', 'm_sqi', 'e_sqi', 'z_sqi', 'snr_sqi', 'k_sqi', 'corr']
+
+        self.create_dataset(win_dict)
 
     def extract_x_y(self, dataset):
         x = dataset[self.feature_list].values
@@ -119,9 +129,7 @@ class SVM:
         ax.set_title('Risk vs. $C$');
         fig.savefig(f'{cfg.SVM_DIR}/selecting_c_{self.true_label.name}_{self.false_label.name}.png', dpi=240)
 
-    def run(self, dataset):
-
-        self.create_dataset(dataset)
+    def run_svm(self):
 
         print("****** SVM ******")
         print(f"True label: {self.true_label.name}, False label: {self.false_label.name}")
@@ -149,18 +157,38 @@ class SVM:
 
         classification_report_actual = classification_report(y_test, predictions)
         print(classification_report_actual)
-        print(test_loss)
 
         self.plot_prediction(x_train, y_train, mean, std)
 
         self.adjust_c_value(x_train, y_train, x_val, y_val, x_test, y_test, x_train_full, y_train_full, mean, std)
 
-        # print("Weights Coefficients:")
+        print("Weights Coefficients:")
         coef_dict = {}
         for i, coef in enumerate(self.svc.coef_[0]):
             coef_dict[self.feature_list[i]] = coef
 
         print(coef_dict)
+
+    def run_lda(self):
+        print("****** LDA ******")
+        print(f"True label: {self.true_label.name}, False label: {self.false_label.name}")
+
+        x_train_full, y_train_full = self.extract_x_y(self.train_full_set)
+        x_train, y_train = self.extract_x_y(self.train_set)
+        x_val, y_val = self.extract_x_y(self.val_set)
+        x_test, y_test = self.extract_x_y(self.test_set)
+
+        ## %%%%%%%%%%%%%%% Your code here - Begin %%%%%%%%%%%%%%%
+        self.lda = LinearDiscriminantAnalysis()
+        self.lda.fit(x_train_full, y_train_full)
+
+        # Define method to evaluate model
+        cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+
+        # evaluate model
+        scores = cross_val_score( self.lda, x_train_full, y_train_full, scoring='accuracy', cv=cv, n_jobs=-1)
+        print(np.mean(scores))
+
 
 
 

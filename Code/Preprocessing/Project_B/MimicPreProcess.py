@@ -8,7 +8,7 @@ import heartpy as hp
 import Utils as utils
 import Config as cfg
 import Plot as plot
-import SVM
+import Trainer
 
 
 class DatasetCreator:
@@ -33,7 +33,7 @@ class DatasetCreator:
 
         sampled_records_list = []
         for patient_records in records_list:
-            # np.random.seed(5)
+            np.random.seed(5)
             sampled_records = np.random.choice(np.array(patient_records), cfg.TRAIN_RECORDS_PER_PATIENT)
             sampled_records_list.append(sampled_records)
 
@@ -41,10 +41,9 @@ class DatasetCreator:
 
         print("loading records..")
         pool = Pool()
-        for record_windows in tqdm(pool.imap(func=self.create_record_dataset, iterable=sampled_records_list),
+        for valid_windows in tqdm(pool.imap(func=self.create_record_dataset, iterable=sampled_records_list),
                                    total=len(sampled_records_list)):
-            self.windows_list += record_windows
-
+            self.windows_list += valid_windows
 
     def create_record_dataset(self, record_path):
         with open(record_path, 'rb') as file:
@@ -91,7 +90,6 @@ class DatasetCreator:
         return new_win
 
     def save_windows_list(self):
-        print(self.windows_list)
         utils.save_list(self.windows_list)
         # utils.save_win(new_win, win_name=f'{name}_{i}')
 
@@ -183,27 +181,30 @@ def main():
 
     # """load_windows_dictionary"""
     win_list = utils.load_list()
+    win_dict = utils.convert_list_to_dict(win_list)
 
-    # TODO: change win dict to win list in the following methods:
-    # """plot windows"""
-    # if cfg.PLOT:
-    #     utils.plot_windows(win_list)
-    #
-    # """histogram of labels"""
-    # # plot.label_histogram(win_list)
-    # # plot.features_histogram(win_list)
-    #
-    # """SVM - good/mid"""
-    # svm = SVM.SVM(true_label=utils.Label.good, false_label=utils.Label.mid)
-    # svm.run(win_dict)
-    #
-    # """SVM - good/bad"""
-    # svm = SVM.SVM(true_label=utils.Label.good, false_label=utils.Label.bad)
-    # svm.run(win_dict)
-    #
-    # """SVM - mid/bad"""
-    # svm = SVM.SVM(true_label=utils.Label.mid, false_label=utils.Label.bad)
-    # svm.run(win_dict)
+    """plot windows"""
+    if cfg.PLOT:
+        utils.plot_windows(win_dict)
+
+    """histogram of labels"""
+    plot.label_histogram(win_dict)
+    plot.features_histogram(win_dict)
+
+    """SVM - good/mid"""
+    trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.mid, win_dict=win_dict)
+    trainer.run_svm()
+    trainer.run_lda()
+
+    """SVM - good/bad"""
+    trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.bad, win_dict=win_dict)
+    trainer.run_svm()
+    trainer.run_lda()
+
+    """SVM - mid/bad"""
+    trainer = Trainer.Trainer(true_label=utils.Label.mid, false_label=utils.Label.bad, win_dict=win_dict)
+    trainer.run_svm()
+    trainer.run_lda()
 
 
 if __name__ == "__main__":

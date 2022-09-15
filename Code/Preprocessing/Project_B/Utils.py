@@ -95,17 +95,25 @@ def load_win(win_path):
 
 
 def load_windows():
-    # windows_list = [os.path.join(path, name) for path, subdirs, files in os.walk(cfg.WINDOWS_DIR) for name in files]
+    windows_list = [os.path.join(path, name) for path, subdirs, files in os.walk(cfg.WINDOWS_DIR) for name in files]
 
-    # windows = []
+    windows = []
     print("loading windows..")
-    # pool = Pool()
-    # for window in tqdm(pool.imap(func=load_win, iterable=windows_list), total=len(windows_list)):
-    #     if window is not None:
-    #         windows.append(window)
+    pool = Pool()
+    for window in tqdm(pool.imap(func=load_win, iterable=windows_list), total=len(windows_list)):
+        if window is not None:
+            windows.append(window)
 
-    for win_path in tqdm(windows_list):
-        window = load_win(win_path)
+    win_dict = convert_list_to_dict(windows_list)
+
+    return win_dict
+
+
+def convert_list_to_dict(windows_list):
+    win_dict = {'s_sqi': [], 'p_sqi': [], 'm_sqi': [], 'e_sqi': [],
+                'z_sqi': [], 'snr_sqi': [], 'k_sqi': [], 'corr': [], 'label': [], 'signal': []}
+
+    for window in tqdm(windows_list):
         if window is not None:
             add_window_to_dict(window, win_dict)
 
@@ -160,14 +168,13 @@ def add_window_to_dict(window, win_dict):
         win_label = window.bp_target
         win_signal = window.bp_signal
 
-    # win_dict['s_sqi'].append(win_sqi.s_sqi)
-    # win_dict['p_sqi'].append(win_sqi.p_sqi)
-    # win_dict['e_sqi'].append(win_sqi.e_sqi)
-    # win_dict['m_sqi'].append(win_sqi.m_sqi)
-    # win_dict['z_sqi'].append(win_sqi.z_sqi)
-    # win_dict['snr_sqi'].append(win_sqi.snr_sqi)
-    # win_dict['k_sqi'].append(win_sqi.k_sqi)
-    # win_dict['corr'].append(win_sqi.corr_sqi)
-    win_dict['bp_sqi']
+    win_dict['s_sqi'].append(win_sqi.s_sqi)
+    win_dict['p_sqi'].append(win_sqi.p_sqi)
+    win_dict['e_sqi'].append(win_sqi.e_sqi)
+    win_dict['m_sqi'].append(win_sqi.m_sqi)
+    win_dict['z_sqi'].append(win_sqi.z_sqi)
+    win_dict['snr_sqi'].append(win_sqi.snr_sqi)
+    win_dict['k_sqi'].append(win_sqi.k_sqi)
+    win_dict['corr'].append(win_sqi.corr_sqi)
     win_dict['label'].append(win_label.value)
     win_dict['signal'].append(win_signal)
