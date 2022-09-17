@@ -195,16 +195,22 @@ def main():
     trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.mid, win_dict=win_dict)
     trainer.run_svm()
     trainer.run_lda()
+    trainer.run_qda()
+    trainer.run_mahalanobis()
 
     """SVM - good/bad"""
     trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.bad, win_dict=win_dict)
     trainer.run_svm()
     trainer.run_lda()
+    trainer.run_qda()
+    trainer.run_mahalanobis()
 
     """SVM - mid/bad"""
     trainer = Trainer.Trainer(true_label=utils.Label.mid, false_label=utils.Label.bad, win_dict=win_dict)
     trainer.run_svm()
     trainer.run_lda()
+    trainer.run_qda()
+    trainer.run_mahalanobis()
 
 
 if __name__ == "__main__":

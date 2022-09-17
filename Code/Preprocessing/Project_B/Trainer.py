@@ -3,20 +3,22 @@ from glob import glob
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from sklearn import svm, metrics
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, accuracy_score, plot_confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 import Utils as utils
 import Config as cfg
 import Plot as plot
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import LabelEncoder
 from sklearn import datasets
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+
+from Code.Preprocessing.Project_B.Mahalnobis import MahalanobisClassifier
 
 
 class Trainer:
@@ -28,6 +30,8 @@ class Trainer:
         self.test_set = None
         self.svc = None
         self.lda = None
+        self.mahanlobis = None
+        self.qda = None
         self.true_label = true_label
         self.false_label = false_label
         self.feature_list = ['s_sqi', 'p_sqi', 'm_sqi', 'e_sqi', 'z_sqi', 'snr_sqi', 'k_sqi', 'corr']
@@ -41,7 +45,12 @@ class Trainer:
 
     def create_dataset(self, full_dataset):
         full_dataset = pd.DataFrame(full_dataset)
-        dataset = full_dataset.query(f'label == {self.true_label.value} or label == {self.false_label.value}')
+        true_label_dataset = full_dataset.query(f'label == {self.true_label.value}')
+        false_label_dataset = full_dataset.query(f'label == {self.false_label.value}')
+        if len(true_label_dataset) < len(false_label_dataset):
+            dataset = pd.concat([true_label_dataset, false_label_dataset[:len(true_label_dataset)]])
+        else:
+            dataset = pd.concat([true_label_dataset[:len(false_label_dataset)], false_label_dataset])
 
         n_samples = len(dataset)
 
@@ -68,7 +77,7 @@ class Trainer:
         self.val_set = dataset.iloc[val_indices]
         self.test_set = dataset.iloc[test_indices]
 
-    def plot_prediction(self, x_train, y_train, mean, std):
+    def plot_svm_prediction(self, x_train, y_train, mean, std):
         dist = ((x_train - mean) / std) @ self.svc.coef_.T + self.svc.intercept_
 
         fig, ax = plt.subplots(1, 1, figsize=(10, 4))
@@ -156,18 +165,22 @@ class Trainer:
         test_loss = (y_test != predictions).mean()
 
         classification_report_actual = classification_report(y_test, predictions)
-        print(classification_report_actual)
+        print('\nAccuracy Score: ', accuracy_score(y_test, predictions))
+        print('\nClassification Report: \n', classification_report_actual)
 
-        self.plot_prediction(x_train, y_train, mean, std)
+        self.plot_svm_prediction(x_train, y_train, mean, std)
 
         self.adjust_c_value(x_train, y_train, x_val, y_val, x_test, y_test, x_train_full, y_train_full, mean, std)
 
-        print("Weights Coefficients:")
-        coef_dict = {}
-        for i, coef in enumerate(self.svc.coef_[0]):
-            coef_dict[self.feature_list[i]] = coef
+        # print("Weights Coefficients:")
+        # coef_dict = {}
+        # for i, coef in enumerate(self.svc.coef_[0]):
+        #     coef_dict[self.feature_list[i]] = coef
 
-        print(coef_dict)
+        # print(coef_dict)
+
+        plot_confusion_matrix(self.svc, x_test, y_test)
+        plt.savefig(f'{cfg.SVM_DIR}/confusion_matrix_{self.true_label.name}_{self.false_label.name}.png', dpi=240)
 
     def run_lda(self):
         print("****** LDA ******")
@@ -178,19 +191,99 @@ class Trainer:
         x_val, y_val = self.extract_x_y(self.val_set)
         x_test, y_test = self.extract_x_y(self.test_set)
 
+        mean = x_train.mean(axis=0, keepdims=True)
+        std = x_train.std(axis=0, keepdims=True)
+
+        ## Run the learning algorithm
+        std[np.where(std == 0)] = 1
+        mean[np.where(std == 0)] = 0
+        x_norm = (x_train - mean) / std
+
         ## %%%%%%%%%%%%%%% Your code here - Begin %%%%%%%%%%%%%%%
         self.lda = LinearDiscriminantAnalysis()
-        self.lda.fit(x_train_full, y_train_full)
+        self.lda.fit(x_train, y_train)
 
-        # Define method to evaluate model
-        cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+        ## Evaluate in the test set
+        predictions = self.lda.predict((x_test - mean) / std)
 
-        # evaluate model
-        scores = cross_val_score( self.lda, x_train_full, y_train_full, scoring='accuracy', cv=cv, n_jobs=-1)
-        print(np.mean(scores))
+        # # Define method to evaluate model
+        # cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+        #
+        # # evaluate model
+        # scores = cross_val_score( self.lda, x_train_full, y_train_full, scoring='accuracy', cv=cv, n_jobs=-1)
+        # print(np.mean(scores))
 
+        print('\nAccuracy Score: ', accuracy_score(y_test, predictions))
+        print('\nClassification Report: \n', classification_report(y_test, predictions))
 
+        plot_confusion_matrix(self.lda, x_test, y_test)
+        plt.savefig(f'{cfg.LDA_DIR}/confusion_matrix_{self.true_label.name}_{self.false_label.name}.png', dpi=240)
 
+    def run_qda(self):
+        print("****** QDA ******")
+        print(f"True label: {self.true_label.name}, False label: {self.false_label.name}")
 
+        x_train_full, y_train_full = self.extract_x_y(self.train_full_set)
+        x_train, y_train = self.extract_x_y(self.train_set)
+        x_val, y_val = self.extract_x_y(self.val_set)
+        x_test, y_test = self.extract_x_y(self.test_set)
+
+        mean = x_train.mean(axis=0, keepdims=True)
+        std = x_train.std(axis=0, keepdims=True)
+
+        ## Run the learning algorithm
+        std[np.where(std == 0)] = 1
+        mean[np.where(std == 0)] = 0
+        x_norm = (x_train - mean) / std
+
+        ## %%%%%%%%%%%%%%% Your code here - Begin %%%%%%%%%%%%%%%
+        self.qda = QuadraticDiscriminantAnalysis()
+        self.qda.fit(x_train, y_train)
+
+        ## Evaluate in the test set
+        predictions = self.qda.predict((x_test - mean) / std)
+
+        # # Define method to evaluate model
+        # cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+        #
+        # # evaluate model
+        # scores = cross_val_score( self.lda, x_train_full, y_train_full, scoring='accuracy', cv=cv, n_jobs=-1)
+        # print(np.mean(scores))
+
+        print('\nAccuracy Score: ', accuracy_score(y_test, predictions))
+        print('\nClassification Report: \n', classification_report(y_test, predictions))
+
+        plot_confusion_matrix(self.qda, x_test, y_test)
+        plt.savefig(f'{cfg.QDA_DIR}/confusion_matrix_{self.true_label.name}_{self.false_label.name}.png', dpi=240)
+
+    def run_mahalanobis(self):
+        x_train_full, y_train_full = self.extract_x_y(self.train_full_set)
+        x_train, y_train = self.extract_x_y(self.train_set)
+        x_val, y_val = self.extract_x_y(self.val_set)
+        x_test, y_test = self.extract_x_y(self.test_set)
+
+        mean = x_train.mean(axis=0, keepdims=True)
+        std = x_train.std(axis=0, keepdims=True)
+
+        ## Run the learning algorithm
+        std[np.where(std == 0)] = 1
+        mean[np.where(std == 0)] = 0
+        x_norm = (x_train - mean) / std
+
+        new_x_train = pd.concat([pd.DataFrame(x_train), pd.DataFrame(y_train)], axis=1, ignore_index=True)
+        new_x_test = pd.concat([pd.DataFrame(x_test), pd.DataFrame(y_test)], axis=1, ignore_index=True)
+
+        print(new_x_train)
+
+        self.mahanlobis = MahalanobisClassifier(new_x_train, y_train)
+        # pred_probs = self.mahanlobis.predict_probability(x_test)
+        unique_labels = np.unique(y_train)
+        pred_class = self.mahanlobis.predict_class(new_x_test, unique_labels)
+
+        print('\nAccuracy Score: ', accuracy_score(y_test, pred_class))
+        print('\nClassification Report: \n', classification_report(y_test, pred_class))
+
+        plot_confusion_matrix(self.mahanlobis, x_test, y_test)
+        plt.savefig(f'{cfg.MAH_DIR}/confusion_matrix_{self.true_label.name}_{self.false_label.name}.png', dpi=240)
 
 

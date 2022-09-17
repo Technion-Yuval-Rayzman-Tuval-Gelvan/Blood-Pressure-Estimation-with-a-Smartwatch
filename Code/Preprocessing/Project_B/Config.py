@@ -53,12 +53,15 @@ WINDOWS_DIR = f'{DATA_DIR}/windows'
 PLOT_DIR = f'{DATA_DIR}/windows_plots'
 HIST_DIR = f'{DATA_DIR}/histogram_plots'
 SVM_DIR = f'{DATA_DIR}/svm_plots/{TIME}'
+LDA_DIR = f'{DATA_DIR}/lda_plots/{TIME}'
+QDA_DIR = f'{DATA_DIR}/qda_plots/{TIME}'
+MAH_DIR = f'{DATA_DIR}/mah_plots/{TIME}'
 
-DIRS_LIST = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR, SVM_DIR]
+DIRS_LIST = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR, SVM_DIR, LDA_DIR, QDA_DIR, MAH_DIR]
 
 for output_dir in DIRS_LIST:
     if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+        os.makedirs(output_dir)
 
 # ------------------------------------------------
 #                Init and Defines
