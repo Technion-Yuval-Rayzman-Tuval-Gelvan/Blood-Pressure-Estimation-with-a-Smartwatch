@@ -257,6 +257,10 @@ class Trainer:
         plt.savefig(f'{cfg.QDA_DIR}/confusion_matrix_{self.true_label.name}_{self.false_label.name}.png', dpi=240)
 
     def run_mahalanobis(self):
+
+        print("****** MAHALNOBIS ******")
+        print(f"True label: {self.true_label.name}, False label: {self.false_label.name}")
+
         x_train_full, y_train_full = self.extract_x_y(self.train_full_set)
         x_train, y_train = self.extract_x_y(self.train_set)
         x_val, y_val = self.extract_x_y(self.val_set)
@@ -273,7 +277,6 @@ class Trainer:
         new_x_train = pd.concat([pd.DataFrame(x_train), pd.DataFrame(y_train)], axis=1, ignore_index=True)
         new_x_test = pd.concat([pd.DataFrame(x_test), pd.DataFrame(y_test)], axis=1, ignore_index=True)
 
-        print(new_x_train)
 
         self.mahanlobis = MahalanobisClassifier(new_x_train, y_train)
         # pred_probs = self.mahanlobis.predict_probability(x_test)
@@ -283,7 +286,7 @@ class Trainer:
         print('\nAccuracy Score: ', accuracy_score(y_test, pred_class))
         print('\nClassification Report: \n', classification_report(y_test, pred_class))
 
-        plot_confusion_matrix(self.mahanlobis, x_test, y_test)
-        plt.savefig(f'{cfg.MAH_DIR}/confusion_matrix_{self.true_label.name}_{self.false_label.name}.png', dpi=240)
+        # plot_confusion_matrix(self.mahanlobis, x_test, y_test)
+        # plt.savefig(f'{cfg.MAH_DIR}/confusion_matrix_{self.true_label.name}_{self.false_label.name}.png', dpi=240)
 
 
