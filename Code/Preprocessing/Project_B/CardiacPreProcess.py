@@ -126,18 +126,23 @@ def main():
     # plot.label_histogram(win_dict)
     # plot.features_histogram(win_dict)
 
-    """SVM - good/mid"""
-    svm = SVM.SVM(true_label = utils.Label.good, false_label= utils.Label.mid)
-    svm.run(win_dict)
+    """good/mid"""
+    print("************************* Good / Mid **************************************")
+    trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.mid, win_dict=win_dict)
+    trainer.run()
 
-    """SVM - good/bad"""
-    svm = SVM.SVM(true_label=utils.Label.good, false_label=utils.Label.bad)
-    svm.run(win_dict)
+    """good/bad"""
+    print("************************* Good / Bad **************************************")
+    trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.bad, win_dict=win_dict)
+    trainer.run()
 
-    """SVM - mid/bad"""
-    svm = SVM.SVM(true_label=utils.Label.mid, false_label=utils.Label.bad)
-    svm.run(win_dict)
+    """mid/bad"""
+    print("************************* Mid / Bad **************************************")
+    trainer = Trainer.Trainer(true_label=utils.Label.mid, false_label=utils.Label.bad, win_dict=win_dict)
+    trainer.run()
 
 
 if __name__ == "__main__":
+    cfg.LOG.redirect_output()
     main()
+    cfg.LOG.close_log_file()

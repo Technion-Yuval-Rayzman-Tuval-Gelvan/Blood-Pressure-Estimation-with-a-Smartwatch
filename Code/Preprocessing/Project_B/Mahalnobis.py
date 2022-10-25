@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import Config as cfg
 
 #
 # def mahalanobis(x=None, data=None, cov=None):
@@ -49,11 +50,17 @@ class MahalanobisClassifier():
         data : ndarray of the distribution from which Mahalanobis distance of each observation of x is to be computed.
         cov  : covariance matrix (p x p) of the distribution. If None, will be computed from data.
         """
-        data = data.drop([4,8], axis=1)
-        x = x.drop([4,8], axis=1)
+
+        if cfg.MULTIPLE_SKI:
+            data = data.drop([4,8], axis=1)
+            x = x.drop([4,8], axis=1)
+        else:
+            data = data.iloc[:, :-1]
+            x = x.iloc[:, :-1]
         x_minus_mu = x - np.mean(data)
         if not cov:
             cov = np.cov(data.values.T)
+        print(cov)
         inv_covmat = sp.linalg.inv(cov)
         left_term = np.dot(x_minus_mu, inv_covmat)
         mahal = np.dot(left_term, x_minus_mu.T)

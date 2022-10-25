@@ -4,6 +4,9 @@ from sklearn import svm
 from datetime import datetime
 from multiprocessing import Lock
 
+from Code.Preprocessing.Project_B.Logger import Logger
+
+
 class Dataset(enum.Enum):
     mimic = 0
     cardiac = 1
@@ -28,6 +31,7 @@ ALL_PATIENTS = False
 HIGH_THRESH = 100
 LOW_THRESH = 70
 WINDOWS_PER_LABEL = 8000
+MULTIPLE_SKI = False
 SIGNAL_TYPE = 'ppg'
 EXP_DIR = f'{SIGNAL_TYPE}_thresh_{HIGH_THRESH}_{LOW_THRESH}'
 
@@ -41,6 +45,7 @@ CARDIAC_LOAD_DIR = f'{BASE_DIR}/cardiac_data/Technion_Synched_Data'
 # datetime object containing current date and time
 now = datetime.now()
 TIME = now.strftime("%d_%m_%Y_%H_%M_%S")
+TIME_DIR = f'Experiments/{TIME}'
 
 if DATASET == Dataset.mimic:
     DATA_DIR = f'{BASE_DIR}/mimic_data/{EXP_DIR}'
@@ -52,10 +57,10 @@ else:
 WINDOWS_DIR = f'{DATA_DIR}/windows'
 PLOT_DIR = f'{DATA_DIR}/windows_plots'
 HIST_DIR = f'{DATA_DIR}/histogram_plots'
-SVM_DIR = f'{DATA_DIR}/svm_plots/{TIME}'
-LDA_DIR = f'{DATA_DIR}/lda_plots/{TIME}'
-QDA_DIR = f'{DATA_DIR}/qda_plots/{TIME}'
-MAH_DIR = f'{DATA_DIR}/mah_plots/{TIME}'
+SVM_DIR = f'{DATA_DIR}/{TIME_DIR}/svm_plots'
+LDA_DIR = f'{DATA_DIR}/{TIME_DIR}/lda_plots'
+QDA_DIR = f'{DATA_DIR}/{TIME_DIR}/qda_plots'
+MAH_DIR = f'{DATA_DIR}/{TIME_DIR}/mah_plots'
 
 DIRS_LIST = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR, SVM_DIR, LDA_DIR, QDA_DIR, MAH_DIR]
 
@@ -67,6 +72,7 @@ for output_dir in DIRS_LIST:
 #                Init and Defines
 # ------------------------------------------------
 USER_CMD = None
+LOG = Logger(f'{DATA_DIR}/{TIME_DIR}/output.log')
 # ------------------------------------------------
 #                Init and Defines
 # ------------------------------------------------
