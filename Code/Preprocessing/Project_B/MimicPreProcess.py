@@ -3,6 +3,8 @@ import pickle
 from multiprocessing import Pool, Lock
 import numpy as np
 import os
+
+import pandas as pd
 from tqdm import tqdm
 import heartpy as hp
 import Utils as utils
@@ -76,8 +78,10 @@ class DatasetCreator:
         name = record.record_name
         win_ppg_target = classify_target(win_ppg_signal, record.fs)
         win_bp_target = classify_target(win_bp_signal, record.fs)
-        if win_ppg_target is None or win_bp_target is None:
+        if win_ppg_target is None or win_bp_target is None or utils.bp_valid(win_bp_signal) is False:
             return
+
+        #TODO save bp detection in window
 
         win_ppg_sqi = utils.SQI()
         win_ppg_sqi.calculate_sqi(win_ppg_signal)
@@ -176,8 +180,8 @@ def main():
     #     save_records_list()
 
     """save records as windows"""
-    # dataset_creator = DatasetCreator()
-    # dataset_creator.create_dataset()
+    dataset_creator = DatasetCreator()
+    dataset_creator.create_dataset()
 
     # """load_windows_dictionary"""
     win_list = utils.load_list()
@@ -191,20 +195,25 @@ def main():
     plot.label_histogram(win_dict)
     plot.features_histogram(win_dict)
 
-    """good/mid"""
-    print("************************* Good / Mid **************************************")
-    trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.mid, win_dict=win_dict)
-    trainer.run()
+    with pd.ExcelWriter(f'{cfg.DATA_DIR}/{cfg.TIME_DIR}/accuracy.xlsx') as excel_writer:
 
-    """good/bad"""
-    print("************************* Good / Bad **************************************")
-    trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.bad, win_dict=win_dict)
-    trainer.run()
+        """good/mid"""
+        print("************************* Good / Mid **************************************")
+        trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.mid,
+                                  win_dict=win_dict, excel_writer=excel_writer)
+        trainer.run()
 
-    """mid/bad"""
-    print("************************* Mid / Bad **************************************")
-    trainer = Trainer.Trainer(true_label=utils.Label.mid, false_label=utils.Label.bad, win_dict=win_dict)
-    trainer.run()
+        """good/bad"""
+        print("************************* Good / Bad **************************************")
+        trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.bad,
+                                  win_dict=win_dict, excel_writer=excel_writer)
+        trainer.run()
+
+        """mid/bad"""
+        print("************************* Mid / Bad **************************************")
+        trainer = Trainer.Trainer(true_label=utils.Label.mid, false_label=utils.Label.bad,
+                                  win_dict=win_dict, excel_writer=excel_writer)
+        trainer.run()
 
 
 if __name__ == "__main__":

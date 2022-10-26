@@ -24,8 +24,9 @@ from Code.Preprocessing.Project_B.Mahalnobis import MahalanobisClassifier
 
 class Trainer:
 
-    def __init__(self, true_label, false_label, win_dict):
+    def __init__(self, true_label, false_label, win_dict, excel_writer):
         self.train_full_set = None
+        self.excel_writer = excel_writer
         self.train_set = None
         self.val_set = None
         self.test_set = None
@@ -35,15 +36,17 @@ class Trainer:
         self.qda = None
         self.true_label = true_label
         self.false_label = false_label
-        self.feature_list = ['s_sqi', 'p_sqi', 'm_sqi', 'e_sqi', 'z_sqi', 'snr_sqi', 'k_sqi', 'corr']
+        self.feature_list = ['s_sqi', 'p_sqi', 'm_sqi', 'e_sqi', 'snr_sqi', 'k_sqi', 'corr']
         self.cur_ski = 'multiple_ski'
         self.accuracy_array = {}
 
         self.create_dataset(win_dict)
 
     def extract_x_y(self, dataset):
-        if cfg.MULTIPLE_SKI:
+        if self.cur_ski == 'all ski':
             features = self.feature_list
+        elif self.cur_ski == 'best ski':
+            features = ['s_sqi', 'm_sqi', 'e_sqi', 'k_sqi', 'corr']
         else:
             features = [self.cur_ski]
         x = dataset[features].values
@@ -143,7 +146,8 @@ class Trainer:
         ax.set_xlabel('$K$')
         ax.set_ylabel('Risk')
         ax.set_title('Risk vs. $C$');
-        fig.savefig(f'{cfg.SVM_DIR}/{self.cur_ski}_selecting_c_{self.true_label.name}_{self.false_label.name}.png', dpi=240)
+        fig.savefig(f'{cfg.SVM_DIR}/{self.cur_ski}_selecting_c_{self.true_label.name}_{self.false_label.name}.png',
+                    dpi=240)
 
     def run_svm(self):
 
@@ -189,7 +193,8 @@ class Trainer:
         # print(coef_dict)
 
         plot_confusion_matrix(self.svc, x_test, y_test)
-        plt.savefig(f'{cfg.SVM_DIR}/{self.cur_ski}_confusion_matrix_{self.true_label.name}_{self.false_label.name}.png', dpi=240)
+        plt.savefig(f'{cfg.SVM_DIR}/{self.cur_ski}_confusion_matrix_{self.true_label.name}_{self.false_label.name}.png',
+                    dpi=240)
 
     def run_lda(self):
         print("****** LDA ******")
@@ -220,7 +225,8 @@ class Trainer:
         print('\nClassification Report: \n', classification_report(y_test, predictions))
 
         plot_confusion_matrix(self.lda, x_test, y_test)
-        plt.savefig(f'{cfg.LDA_DIR}/{self.cur_ski}_confusion_matrix_{self.true_label.name}_{self.false_label.name}.png', dpi=240)
+        plt.savefig(f'{cfg.LDA_DIR}/{self.cur_ski}_confusion_matrix_{self.true_label.name}_{self.false_label.name}.png',
+                    dpi=240)
 
     def run_qda(self):
         print("****** QDA ******")
@@ -249,11 +255,11 @@ class Trainer:
         self.accuracy_array[self.cur_ski]['qda'] = accuracy
         print('\nAccuracy Score: ', accuracy)
 
-
         print('\nClassification Report: \n', classification_report(y_test, predictions))
 
         plot_confusion_matrix(self.qda, x_test, y_test)
-        plt.savefig(f'{cfg.QDA_DIR}/{self.cur_ski}_confusion_matrix_{self.true_label.name}_{self.false_label.name}.png', dpi=240)
+        plt.savefig(f'{cfg.QDA_DIR}/{self.cur_ski}_confusion_matrix_{self.true_label.name}_{self.false_label.name}.png',
+                    dpi=240)
 
     def run_mahalanobis(self):
 
@@ -276,34 +282,58 @@ class Trainer:
         new_x_train = pd.concat([pd.DataFrame(x_train), pd.DataFrame(y_train)], axis=1, ignore_index=True)
         new_x_test = pd.concat([pd.DataFrame(x_test), pd.DataFrame(y_test)], axis=1, ignore_index=True)
 
-
         self.mahanlobis = MahalanobisClassifier(new_x_train, y_train)
         # pred_probs = self.mahanlobis.predict_probability(x_test)
         unique_labels = np.unique(y_train)
 
-        pred_class = self.mahanlobis.predict_class(new_x_test, unique_labels)
+        all_ski = False
+        if self.cur_ski == 'all ski':
+            all_ski = True
+        pred_class = self.mahanlobis.predict_class(new_x_test, unique_labels, all_ski)
 
-        print('\nAccuracy Score: ', accuracy_score(y_test, pred_class))
+        accuracy = accuracy_score(y_test, pred_class)
+        self.accuracy_array[self.cur_ski]['mahalanobis'] = accuracy
+
+        print('\nAccuracy Score: ', accuracy)
         print('\nClassification Report: \n', classification_report(y_test, pred_class))
 
         sklearn.metrics.confusion_matrix(y_test, pred_class)
-        plt.savefig(f'{cfg.MAH_DIR}/{self.cur_ski}/confusion_matrix_{self.true_label.name}_{self.false_label.name}.png', dpi=240)
+        plt.savefig(f'{cfg.MAH_DIR}/{self.cur_ski}_confusion_matrix_{self.true_label.name}_{self.false_label.name}.png',
+                    dpi=240)
+
+    def save_models(self, exp):
+
+        utils.save_model(self.svc, f'{exp}_svm')
+        utils.save_model(self.lda, f'{exp}_lda')
+        utils.save_model(self.qda, f'{exp}_qda')
+        utils.save_model(self.mahanlobis, f'{exp}_mahanlobis')
 
     def run(self):
 
-        if cfg.MULTIPLE_SKI:
+        print(f'************************ All SKI *********************************')
+        self.cur_ski = "all ski"
+        self.accuracy_array["all ski"] = {'svm': 0, 'lda': 0, 'qda': 0, 'mahalanobis': 0}
+        self.run_svm()
+        self.run_lda()
+        self.run_qda()
+        self.run_mahalanobis()
+        self.save_models(f'{self.true_label.name}_{self.false_label.name}')
+
+        print(f'************************ Best SKI *********************************')
+        self.cur_ski = "best ski"
+        self.accuracy_array["best ski"] = {'svm': 0, 'lda': 0, 'qda': 0, 'mahalanobis': 0}
+        self.run_svm()
+        self.run_lda()
+        self.run_qda()
+        self.run_mahalanobis()
+
+        for ski in self.feature_list:
+            print(f'************************ {ski} *********************************')
+            self.cur_ski = ski
+            self.accuracy_array[f"{self.cur_ski}"] = {'svm': 0, 'lda': 0, 'qda': 0, 'mahalanobis': 0}
             self.run_svm()
             self.run_lda()
             self.run_qda()
             self.run_mahalanobis()
 
-        else:
-            for ski in self.feature_list:
-                print(f'************************{ski}*********************************')
-                self.cur_ski = ski
-                self.accuracy_array[f"{self.cur_ski}"] = {'svm': 0, 'lda': 0, 'qda': 0}
-                self.run_svm()
-                self.run_lda()
-                self.run_qda()
-
-            pd.DataFrame(self.accuracy_array).to_excel(f'{cfg.DATA_DIR}/{cfg.TIME_DIR}/accuracy_{self.true_label.name}_{self.false_label.name}.xlsx')
+        pd.DataFrame(self.accuracy_array).to_excel(self.excel_writer, sheet_name=f'{self.true_label.name}-{self.false_label.name}')

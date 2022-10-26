@@ -23,6 +23,9 @@ def classify_target(signal_flags):
 
 
 def preprocess_data(data):
+
+    win_list = []
+
     for name, record in tqdm(data.items()):
         ppg_signal = np.array(record['IR'])
         bp_signal = np.array(record['Aline'])
@@ -30,7 +33,7 @@ def preprocess_data(data):
         bp_flags = np.array(record['AlineFlag'])
         sig_len = len(ppg_signal)
         window_in_sec = 30
-        win_counter = 0
+        i = 0
 
         start_point = 0
         end_point = start_point + (window_in_sec * cfg.FREQUENCY)
@@ -51,6 +54,9 @@ def preprocess_data(data):
             win_bp_flags = bp_flags[start_point:end_point]
             win_ppg_target = classify_target(win_ppg_flags)
             win_bp_target = classify_target(win_bp_flags)
+            if win_ppg_target is None or win_bp_target is None:
+                return
+
             win_ppg_sqi = utils.SQI()
             win_ppg_sqi.calculate_sqi(win_ppg_signal)
             win_bp_sqi = utils.SQI()
@@ -59,10 +65,13 @@ def preprocess_data(data):
             start_point += new_samples_per_step
             end_point += new_samples_per_step
 
-            new_win = utils.Window(record, win_ppg_signal, win_bp_signal, win_ppg_target,
-                             win_bp_target, win_bp_sqi, win_ppg_sqi)
-            utils.save_win(new_win, win_name=f'{name}_{win_counter}')
+            new_win = utils.Window(win_ppg_signal, win_bp_signal, win_ppg_target,
+                             win_bp_target, win_bp_sqi, win_ppg_sqi, win_name = f'{name}_{i}')
+            i += 1
 
+            win_list += [new_win]
+
+    return win_list
 
 def load_files():
     data = {}
@@ -102,21 +111,21 @@ def main():
     assert cfg.DATASET == cfg.Dataset.cardiac
 
     """get dictionary of records"""
-    # data = load_files()
+    data = load_files()
 
     """plot full signals"""
     # plot_signals(data)
 
     # TODO: change win dict to win list in the following methods:
     """save records as windows"""
-    # preprocess_data(data)
+    win_list = preprocess_data(data)
 
     """load windows"""
-    # win_dict = utils.load_windows()
-    # utils.save_list(win_dict)
+    utils.save_list(win_list)
 
     """load_windows_dictionary"""
-    win_dict = utils.load_list()
+    win_list = utils.load_list()
+    win_dict = utils.convert_list_to_dict(win_list)
 
     """plot windows"""
     if cfg.PLOT:
@@ -126,23 +135,28 @@ def main():
     # plot.label_histogram(win_dict)
     # plot.features_histogram(win_dict)
 
-    """good/mid"""
-    print("************************* Good / Mid **************************************")
-    trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.mid, win_dict=win_dict)
-    trainer.run()
+    with pd.ExcelWriter(f'{cfg.DATA_DIR}/{cfg.TIME_DIR}/accuracy.xlsx') as excel_writer:
 
-    """good/bad"""
-    print("************************* Good / Bad **************************************")
-    trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.bad, win_dict=win_dict)
-    trainer.run()
+        """good/mid"""
+        print("************************* Good / Mid **************************************")
+        trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.mid,
+                                  win_dict=win_dict, excel_writer=excel_writer)
+        trainer.run()
 
-    """mid/bad"""
-    print("************************* Mid / Bad **************************************")
-    trainer = Trainer.Trainer(true_label=utils.Label.mid, false_label=utils.Label.bad, win_dict=win_dict)
-    trainer.run()
+        """good/bad"""
+        print("************************* Good / Bad **************************************")
+        trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.bad,
+                                  win_dict=win_dict, excel_writer=excel_writer)
+        trainer.run()
+
+        """mid/bad"""
+        print("************************* Mid / Bad **************************************")
+        trainer = Trainer.Trainer(true_label=utils.Label.mid, false_label=utils.Label.bad,
+                                  win_dict=win_dict, excel_writer=excel_writer)
+        trainer.run()
 
 
 if __name__ == "__main__":
-    cfg.LOG.redirect_output()
+    # cfg.LOG.redirect_output()
     main()
-    cfg.LOG.close_log_file()
+    # cfg.LOG.close_log_file()

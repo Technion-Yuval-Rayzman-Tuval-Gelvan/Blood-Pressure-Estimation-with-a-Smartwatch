@@ -4,6 +4,7 @@ import pickle
 from multiprocessing import Pool
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.signal import find_peaks
 from sklearn import metrics, svm
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
@@ -68,6 +69,17 @@ def calculate_corr_sqi(signal):
     return squared_magnitude
 
 
+def save_model(model, model_name):
+    with open(f"{cfg.MODELS_DIR}/{model_name}.pkl", 'wb') as file:
+        pickle.dump(model, file)
+
+
+def load_model(dir_path, model_name):
+    with open(f"{dir_path}/{model_name}.pkl", 'rb') as file:
+        model = pickle.load(file)
+    return model
+
+
 def save_win(win, win_name):
     with open(f"{cfg.WINDOWS_DIR}/{win_name}", 'wb') as file:
         pickle.dump(win, file)
@@ -104,9 +116,7 @@ def load_windows():
         if window is not None:
             windows.append(window)
 
-    win_dict = convert_list_to_dict(windows_list)
-
-    return win_dict
+    return windows
 
 
 def convert_list_to_dict(windows_list):
@@ -178,3 +188,31 @@ def add_window_to_dict(window, win_dict):
     win_dict['corr'].append(win_sqi.corr_sqi)
     win_dict['label'].append(win_label.value)
     win_dict['signal'].append(win_signal)
+
+
+def bp_detection(signal):
+    max_peaks, _ = find_peaks(signal)
+    min_peaks, _ = find_peaks(-signal)
+    systolic_bp, diastolic_bp = 0, 0
+
+    if len(max_peaks) != 0:
+        sys_peaks = max_peaks[signal[max_peaks] >= np.mean(signal[max_peaks])]
+        if len(sys_peaks) != 0:
+            systolic_bp = np.mean(signal[sys_peaks])
+
+    if len(min_peaks) != 0:
+        dias_peaks = min_peaks[signal[min_peaks] <= np.mean(signal[min_peaks])]
+        if len(dias_peaks) != 0:
+            diastolic_bp = np.mean(signal[dias_peaks])
+
+    return systolic_bp, diastolic_bp
+
+
+def bp_valid(signal):
+
+    systolic_bp, diastolic_bp = bp_detection(signal)
+    # remove windows that not in valid range
+    if systolic_bp > 185 or systolic_bp < 55 or diastolic_bp < 30 or diastolic_bp > 120:
+        return False
+
+    return True

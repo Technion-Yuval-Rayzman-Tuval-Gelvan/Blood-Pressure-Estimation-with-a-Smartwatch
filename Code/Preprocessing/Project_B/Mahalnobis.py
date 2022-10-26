@@ -44,29 +44,28 @@ class MahalanobisClassifier():
             samples = pd.DataFrame(samples)
             self.clusters[lbl] = samples.loc[indices, :]
 
-    def mahalanobis(self, x, data, cov=None):
+    def mahalanobis(self, x, data, all_ski=True, cov=None):
         """Compute the Mahalanobis Distance between each row of x and the data
         x    : vector or matrix of data with, say, p columns.
         data : ndarray of the distribution from which Mahalanobis distance of each observation of x is to be computed.
         cov  : covariance matrix (p x p) of the distribution. If None, will be computed from data.
         """
 
-        if cfg.MULTIPLE_SKI:
-            data = data.drop([4,8], axis=1)
-            x = x.drop([4,8], axis=1)
-        else:
-            data = data.iloc[:, :-1]
-            x = x.iloc[:, :-1]
+
+        data = data.iloc[:, :-1]
+        x = x.iloc[:, :-1]
         x_minus_mu = x - np.mean(data)
         if not cov:
             cov = np.cov(data.values.T)
-        print(cov)
-        inv_covmat = sp.linalg.inv(cov)
+        if all_ski is False:
+            inv_covmat = cov
+        else:
+            inv_covmat = sp.linalg.inv(cov)
         left_term = np.dot(x_minus_mu, inv_covmat)
         mahal = np.dot(left_term, x_minus_mu.T)
         return mahal.diagonal()
 
-    def predict_probability(self, unlabeled_samples):
+    def predict_probability(self, unlabeled_samples, all_ski=True):
         dists = np.array([])
 
         def dist2prob(D):
@@ -80,7 +79,7 @@ class MahalanobisClassifier():
             # Distance of each sample from all clusters
 
         for lbl in self.clusters:
-            tmp_dists = self.mahalanobis(unlabeled_samples, self.clusters[lbl])
+            tmp_dists = self.mahalanobis(unlabeled_samples, self.clusters[lbl], all_ski)
             if len(dists) != 0:
                 dists = np.column_stack((dists, tmp_dists))
             else:
@@ -88,5 +87,5 @@ class MahalanobisClassifier():
 
         return dist2prob(dists)
 
-    def predict_class(self, unlabeled_sample, ind2label):
-        return np.array([ind2label[np.argmax(row)] for row in self.predict_probability(unlabeled_sample)])
+    def predict_class(self, unlabeled_sample, ind2label, all_ski=True):
+        return np.array([ind2label[np.argmax(row)] for row in self.predict_probability(unlabeled_sample, all_ski)])

@@ -13,15 +13,11 @@ class Dataset(enum.Enum):
 
 # EXPERIMENT = ''
 
-MODELS = {'svm': svm,
-
-          }
-
 # ------------------------------------------------
 #                   CONFIG
 # ------------------------------------------------
-DATASET = Dataset.mimic
-# DATASET = Dataset.cardiac
+# DATASET = Dataset.mimic
+DATASET = Dataset.cardiac
 PLOT = False
 MAX_PLOT_PER_LABEL = 10
 MIN_RECORDS_PER_PATIENT = 1000  # take only patients with more records
@@ -31,8 +27,7 @@ ALL_PATIENTS = False
 HIGH_THRESH = 100
 LOW_THRESH = 70
 WINDOWS_PER_LABEL = 8000
-MULTIPLE_SKI = False
-SIGNAL_TYPE = 'ppg'
+SIGNAL_TYPE = 'ppg'  # ppg or bp
 EXP_DIR = f'{SIGNAL_TYPE}_thresh_{HIGH_THRESH}_{LOW_THRESH}'
 
 # ------------------------------------------------
@@ -61,8 +56,9 @@ SVM_DIR = f'{DATA_DIR}/{TIME_DIR}/svm_plots'
 LDA_DIR = f'{DATA_DIR}/{TIME_DIR}/lda_plots'
 QDA_DIR = f'{DATA_DIR}/{TIME_DIR}/qda_plots'
 MAH_DIR = f'{DATA_DIR}/{TIME_DIR}/mah_plots'
+MODELS_DIR = f'{DATA_DIR}/{TIME_DIR}/models'
 
-DIRS_LIST = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR, SVM_DIR, LDA_DIR, QDA_DIR, MAH_DIR]
+DIRS_LIST = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR, SVM_DIR, LDA_DIR, QDA_DIR, MAH_DIR, MODELS_DIR]
 
 for output_dir in DIRS_LIST:
     if not os.path.exists(output_dir):
