@@ -52,4 +52,8 @@ class ClassifyPlatform:
 
         return False
 
+    def test_platform(self, win_list):
 
+        for win in win_list:
+            result = self.valid_win(win)
+            print(f"Result: {result}")

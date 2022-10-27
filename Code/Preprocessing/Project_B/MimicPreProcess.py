@@ -12,6 +12,7 @@ import Config as cfg
 import Plot as plot
 import Trainer
 import SQI as sqi
+from Code.Preprocessing.Project_B.ClassifyPlatform import ClassifyPlatform
 
 
 class DatasetCreator:
@@ -70,8 +71,8 @@ class DatasetCreator:
                     if cfg.TRAIN_MODELS:
                         if new_win is not None:
                             valid_windows.append(new_win)
-                    else:
-                        # Classify window with the trained models
+                    # else:
+                    #     # Classify window with the trained models
 
 
         return valid_windows
@@ -190,36 +191,38 @@ def main():
     # dataset_creator.create_dataset()
 
     # """load_windows_dictionary"""
-    win_list = utils.load_list()
-    win_dict = utils.convert_list_to_dict(win_list)
+    # win_list = utils.load_list()
+
+    """  Train Models  """
+    # win_dict = utils.convert_list_to_dict(win_list)
 
     """plot windows"""
-    if cfg.PLOT:
-        utils.plot_windows(win_dict)
+    # if cfg.PLOT:
+    #     utils.plot_windows(win_dict)
 
     """histogram of labels"""
-    plot.label_histogram(win_dict)
-    plot.features_histogram(win_dict)
+    # plot.label_histogram(win_dict)
+    # plot.features_histogram(win_dict)
 
-    with pd.ExcelWriter(f'{cfg.DATA_DIR}/{cfg.TIME_DIR}/accuracy.xlsx') as excel_writer:
-
-        """good/mid"""
-        print("************************* Good / Mid **************************************")
-        trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.mid,
-                                  win_dict=win_dict, excel_writer=excel_writer)
-        trainer.run()
-
-        """good/bad"""
-        print("************************* Good / Bad **************************************")
-        trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.bad,
-                                  win_dict=win_dict, excel_writer=excel_writer)
-        trainer.run()
-
-        """mid/bad"""
-        print("************************* Mid / Bad **************************************")
-        trainer = Trainer.Trainer(true_label=utils.Label.mid, false_label=utils.Label.bad,
-                                  win_dict=win_dict, excel_writer=excel_writer)
-        trainer.run()
+    # with pd.ExcelWriter(f'{cfg.DATA_DIR}/{cfg.TIME_DIR}/accuracy.xlsx') as excel_writer:
+    #
+    #     """good/mid"""
+    #     print("************************* Good / Mid **************************************")
+    #     trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.mid,
+    #                               win_dict=win_dict, excel_writer=excel_writer)
+    #     trainer.run()
+    #
+    #     """good/bad"""
+    #     print("************************* Good / Bad **************************************")
+    #     trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.bad,
+    #                               win_dict=win_dict, excel_writer=excel_writer)
+    #     trainer.run()
+    #
+    #     """mid/bad"""
+    #     print("************************* Mid / Bad **************************************")
+    #     trainer = Trainer.Trainer(true_label=utils.Label.mid, false_label=utils.Label.bad,
+    #                               win_dict=win_dict, excel_writer=excel_writer)
+    #     trainer.run()
 
 
 if __name__ == "__main__":
