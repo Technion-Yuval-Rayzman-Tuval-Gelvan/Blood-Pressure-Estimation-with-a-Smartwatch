@@ -157,6 +157,6 @@ def main():
 
 
 if __name__ == "__main__":
-    # cfg.LOG.redirect_output()
+    cfg.LOG.redirect_output()
     main()
-    # cfg.LOG.close_log_file()
+    cfg.LOG.close_log_file()

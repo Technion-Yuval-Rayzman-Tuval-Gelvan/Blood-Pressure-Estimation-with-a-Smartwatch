@@ -8,9 +8,7 @@ from scipy.signal import find_peaks
 from sklearn import metrics, svm
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-from vital_sqi.sqi.standard_sqi import (perfusion_sqi, kurtosis_sqi, skewness_sqi,
-                                        entropy_sqi, signal_to_noise_sqi, zero_crossings_rate_sqi,
-                                        mean_crossing_rate_sqi)
+
 import heartpy as hp
 import Config as cfg
 
@@ -21,32 +19,9 @@ class Label(enum.Enum):
     bad = 2
 
 
-class SQI:
-
-    def __init__(self):
-        self.s_sqi = None
-        self.p_sqi = None
-        self.m_sqi = None
-        self.e_sqi = None
-        self.z_sqi = None
-        self.snr_sqi = None
-        self.k_sqi = None
-        self.corr_sqi = None
-
-    def calculate_sqi(self, signal):
-        self.s_sqi = round(skewness_sqi(signal), 4)
-        self.p_sqi = round(perfusion_sqi(signal, signal), 4)
-        self.m_sqi = round(mean_crossing_rate_sqi(signal), 5)
-        self.e_sqi = round(entropy_sqi(signal), 4)
-        self.z_sqi = round(zero_crossings_rate_sqi(signal), 4)
-        self.snr_sqi = round(float(signal_to_noise_sqi(signal)), 4)
-        self.k_sqi = round(kurtosis_sqi(signal), 4)
-        self.corr_sqi = round(calculate_corr_sqi(signal), 4)
-
-
 class Window:
 
-    def __init__(self, ppg_signal, bp_signal, ppg_target, bp_target, bp_sqi, ppg_sqi, win_name):
+    def __init__(self, ppg_signal, bp_signal, ppg_target, bp_target, bp_sqi, ppg_sqi, win_name, sys_bp, dias_bp):
         self.bp_signal = bp_signal
         self.ppg_signal = ppg_signal
         self.ppg_target = ppg_target
@@ -54,19 +29,8 @@ class Window:
         self.bp_sqi = bp_sqi
         self.ppg_sqi = ppg_sqi
         self.win_name = win_name
-
-
-def calculate_corr_sqi(signal):
-    signal_centered = signal - np.mean(signal)
-    signal_corr = np.correlate(signal_centered, signal_centered, 'full')
-    if signal_corr[3750] != 0:
-        corr_norm = signal_corr / signal_corr[3750]
-        corr_norm = corr_norm[len(signal):]
-        squared_magnitude = np.sum(np.power(corr_norm, 2))
-    else:
-        squared_magnitude = 0
-
-    return squared_magnitude
+        self.sys_bp = sys_bp
+        self.dias_bp = dias_bp
 
 
 def save_model(model, model_name):
@@ -208,9 +172,8 @@ def bp_detection(signal):
     return systolic_bp, diastolic_bp
 
 
-def bp_valid(signal):
+def bp_valid(systolic_bp, diastolic_bp):
 
-    systolic_bp, diastolic_bp = bp_detection(signal)
     # remove windows that not in valid range
     if systolic_bp > 185 or systolic_bp < 55 or diastolic_bp < 30 or diastolic_bp > 120:
         return False

@@ -11,6 +11,7 @@ import Utils as utils
 import Config as cfg
 import Plot as plot
 import Trainer
+import SQI as sqi
 
 
 class DatasetCreator:
@@ -45,7 +46,8 @@ class DatasetCreator:
         pool = Pool()
         for valid_windows in tqdm(pool.imap(func=self.create_record_dataset, iterable=sampled_records_list),
                                    total=len(sampled_records_list)):
-            self.windows_list += valid_windows
+            if cfg.TRAIN_MODELS:
+                self.windows_list += valid_windows
 
     def create_record_dataset(self, record_path):
         with open(record_path, 'rb') as file:
@@ -64,13 +66,17 @@ class DatasetCreator:
                 bp_signal = win.p_signal[:, bp_index]
                 ppg_signal = win.p_signal[:, ppg_index]
                 if not np.count_nonzero(np.isnan(ppg_signal)) and not np.count_nonzero(np.isnan(bp_signal)):
-                    new_win = self.save_valid_windows(win, ppg_index, bp_index, record, i)
-                    if new_win is not None:
-                        valid_windows.append(new_win)
+                    new_win = self.create_window(win, ppg_index, bp_index, record, i)
+                    if cfg.TRAIN_MODELS:
+                        if new_win is not None:
+                            valid_windows.append(new_win)
+                    else:
+                        # Classify window with the trained models
+
 
         return valid_windows
 
-    def save_valid_windows(self, win, ppg_index, bp_index, record, i):
+    def create_window(self, win, ppg_index, bp_index, record, i):
 
         win_ppg_signal = win.p_signal[:, ppg_index]
         win_bp_signal = win.p_signal[:, bp_index]
@@ -78,18 +84,18 @@ class DatasetCreator:
         name = record.record_name
         win_ppg_target = classify_target(win_ppg_signal, record.fs)
         win_bp_target = classify_target(win_bp_signal, record.fs)
-        if win_ppg_target is None or win_bp_target is None or utils.bp_valid(win_bp_signal) is False:
+        sys_bp, dias_bp = utils.bp_detection(win_bp_signal)
+        if win_ppg_target is None or win_bp_target is None or utils.bp_valid(sys_bp, dias_bp) is False:
             return
 
-        #TODO save bp detection in window
-
-        win_ppg_sqi = utils.SQI()
+        win_ppg_sqi = sqi.SQI()
         win_ppg_sqi.calculate_sqi(win_ppg_signal)
-        win_bp_sqi = utils.SQI()
+        win_bp_sqi = sqi.SQI()
         win_bp_sqi.calculate_sqi(win_bp_signal)
 
         new_win = utils.Window(win_ppg_signal, win_bp_signal, win_ppg_target,
-                               win_bp_target, win_bp_sqi, win_ppg_sqi, win_name=f'{name}_{i}')
+                               win_bp_target, win_bp_sqi, win_ppg_sqi,
+                               win_name=f'{name}_{i}', sys_bp=sys_bp, dias_bp=dias_bp)
 
         return new_win
 
@@ -180,8 +186,8 @@ def main():
     #     save_records_list()
 
     """save records as windows"""
-    dataset_creator = DatasetCreator()
-    dataset_creator.create_dataset()
+    # dataset_creator = DatasetCreator()
+    # dataset_creator.create_dataset()
 
     # """load_windows_dictionary"""
     win_list = utils.load_list()

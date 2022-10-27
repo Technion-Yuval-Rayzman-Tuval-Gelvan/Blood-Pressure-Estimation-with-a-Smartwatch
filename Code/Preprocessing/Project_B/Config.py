@@ -16,8 +16,8 @@ class Dataset(enum.Enum):
 # ------------------------------------------------
 #                   CONFIG
 # ------------------------------------------------
-# DATASET = Dataset.mimic
-DATASET = Dataset.cardiac
+DATASET = Dataset.mimic
+# DATASET = Dataset.cardiac
 PLOT = False
 MAX_PLOT_PER_LABEL = 10
 MIN_RECORDS_PER_PATIENT = 1000  # take only patients with more records
@@ -27,7 +27,8 @@ ALL_PATIENTS = False
 HIGH_THRESH = 100
 LOW_THRESH = 70
 WINDOWS_PER_LABEL = 8000
-SIGNAL_TYPE = 'ppg'  # ppg or bp
+TRAIN_MODELS = False
+SIGNAL_TYPE = 'bp'  # ppg or bp
 EXP_DIR = f'{SIGNAL_TYPE}_thresh_{HIGH_THRESH}_{LOW_THRESH}'
 
 # ------------------------------------------------
@@ -57,6 +58,8 @@ LDA_DIR = f'{DATA_DIR}/{TIME_DIR}/lda_plots'
 QDA_DIR = f'{DATA_DIR}/{TIME_DIR}/qda_plots'
 MAH_DIR = f'{DATA_DIR}/{TIME_DIR}/mah_plots'
 MODELS_DIR = f'{DATA_DIR}/{TIME_DIR}/models'
+PPG_MODELS_LOAD_DIR = '/media/tuvalgelvan@staff.technion.ac.il/HD34/Estimated-Blood-Pressure-Project/mimic_data/ppg_thresh_100_70/Final_results/Final_Results_26_10_2022_16_23_19/models'
+BP_MODELS_LOAD_DIR = '/media/tuvalgelvan@staff.technion.ac.il/HD34/Estimated-Blood-Pressure-Project/mimic_data/bp_thresh_100_70/Final_results/Final_result_27_10_2022_15_21_19/models'
 
 DIRS_LIST = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR, SVM_DIR, LDA_DIR, QDA_DIR, MAH_DIR, MODELS_DIR]
 
