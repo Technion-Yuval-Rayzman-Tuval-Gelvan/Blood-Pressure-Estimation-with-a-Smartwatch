@@ -36,7 +36,7 @@ import numpy as np
 import scipy as sp
 
 
-class MahalanobisClassifier():
+class MahalanobisClassifier:
     def __init__(self, samples, labels):
         self.clusters = {}
         for lbl in np.unique(labels):
@@ -51,9 +51,11 @@ class MahalanobisClassifier():
         cov  : covariance matrix (p x p) of the distribution. If None, will be computed from data.
         """
 
-
         data = data.iloc[:, :-1]
-        x = x.iloc[:, :-1]
+
+        if cfg.TRAIN_MODELS:
+            x = x.iloc[:, :-1]
+
         x_minus_mu = x - np.mean(data)
         if not cov:
             cov = np.cov(data.values.T)
@@ -63,6 +65,8 @@ class MahalanobisClassifier():
             inv_covmat = sp.linalg.inv(cov)
         left_term = np.dot(x_minus_mu, inv_covmat)
         mahal = np.dot(left_term, x_minus_mu.T)
+        if not cfg.TRAIN_MODELS:
+            mahal = np.array([np.array([mahal])])
         return mahal.diagonal()
 
     def predict_probability(self, unlabeled_samples, all_ski=True):

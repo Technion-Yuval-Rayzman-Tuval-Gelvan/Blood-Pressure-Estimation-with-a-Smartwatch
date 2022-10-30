@@ -3,7 +3,6 @@ import pickle
 from multiprocessing import Pool, Lock
 import numpy as np
 import os
-
 import pandas as pd
 from tqdm import tqdm
 import heartpy as hp
@@ -11,7 +10,7 @@ import Utils as utils
 import Config as cfg
 import Plot as plot
 import Trainer
-import SQI as sqi
+from SQI import SQI
 from Code.Preprocessing.Project_B.ClassifyPlatform import ClassifyPlatform
 
 
@@ -191,18 +190,18 @@ def main():
     # dataset_creator.create_dataset()
 
     # """load_windows_dictionary"""
-    # win_list = utils.load_list()
+    win_list = utils.load_list()
 
     """  Train Models  """
-    # win_dict = utils.convert_list_to_dict(win_list)
+    win_dict = utils.convert_list_to_dict(win_list)
 
     """plot windows"""
     # if cfg.PLOT:
     #     utils.plot_windows(win_dict)
 
     """histogram of labels"""
-    # plot.label_histogram(win_dict)
-    # plot.features_histogram(win_dict)
+    plot.label_histogram(win_dict)
+    plot.features_histogram(win_dict)
 
     # with pd.ExcelWriter(f'{cfg.DATA_DIR}/{cfg.TIME_DIR}/accuracy.xlsx') as excel_writer:
     #

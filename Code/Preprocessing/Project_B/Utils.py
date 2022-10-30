@@ -8,7 +8,7 @@ from scipy.signal import find_peaks
 from sklearn import metrics, svm
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-
+from SQI import SQI
 import heartpy as hp
 import Config as cfg
 
@@ -118,6 +118,27 @@ def plot_win(win, name):
         return
 
     plt.savefig(f"{cfg.PLOT_DIR}/{name}.png")
+
+
+def plot_signal(signal, name, is_ppg):
+    hp.config.colorblind = False
+    hp.config.color_style = 'default'
+
+    try:
+        wd, m = hp.process(signal, cfg.FREQUENCY)
+        hp.plotter(wd, m, show=False)
+    except:
+        print(f"Bad record: {name}")
+        return
+
+    if is_ppg:
+        dir = f"{cfg.CLASSIFIED_PLOTS}/ppg"
+    else:
+        dir = f"{cfg.CLASSIFIED_PLOTS}/bp"
+
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    plt.savefig(f"{dir}/{name}.png")
 
 
 def show_histogram(windows):
