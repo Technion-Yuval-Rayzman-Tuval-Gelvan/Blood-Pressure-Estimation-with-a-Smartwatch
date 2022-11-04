@@ -23,7 +23,6 @@ class ClassifyPlatform:
         self.bp_lda_model = None
         self.bp_qda_model = None
         self.bp_svm_model = None
-        self.results_array = {'PPG True': [], 'PPG False': [], 'BP True': [], 'BP False': []}
 
     def load_models(self):
 
@@ -60,16 +59,19 @@ class ClassifyPlatform:
         # True label is 1 and Bad is -1
         score = y_mah + y_lda + y_qda + y_svm
 
-        if score >= cfg.TRUE_SCORE:
+        if is_ppg:
+            true_score = cfg.TRUE_PPG_SCORE
+        else:
+            true_score = cfg.TRUE_BP_SCORE
+
+        if score >= true_score:
             return True
 
         return False
 
     def valid_win(self, win):
-        ppg_sqi = win.ppg_sqi
-        x_ppg = ppg_sqi.get_ski_list()
-        bp_sqi = win.bp_sqi
-        x_bp = bp_sqi.get_ski_list()
+        x_ppg = win.ppg_sqi
+        x_bp = win.bp_sqi
         bp_valid = False
         ppg_valid = False
 
@@ -84,40 +86,47 @@ class ClassifyPlatform:
     def test_platform(self, win_list):
 
         valid_windows = 0
+        results_array = {'PPG True': [], 'PPG False': [], 'BP True': [], 'BP False': []}
+
         for win in win_list:
             bp_valid, ppg_valid = self.valid_win(win)
             if bp_valid is True:
-                self.results_array['BP True'].append(win)
+                results_array['BP True'].append(win)
             else:
-                self.results_array['BP False'].append(win)
+                results_array['BP False'].append(win)
             if ppg_valid is True:
-                self.results_array['PPG True'].append(win)
+                results_array['PPG True'].append(win)
             else:
-                self.results_array['PPG False'].append(win)
+                results_array['PPG False'].append(win)
             if ppg_valid and bp_valid:
                 valid_windows += 1
 
         for i in range(10):
 
             """Plot 10 True window"""
-            utils.plot_signal(self.results_array['PPG True'][i].ppg_signal, f'true_signal_{i}', is_ppg=True)
-            utils.plot_signal(self.results_array['BP True'][i].bp_signal, f'true_signal_{i}', is_ppg=False)
+            utils.plot_signal(results_array['PPG True'][i].ppg_signal, f'true_signal_{i}', is_ppg=True)
+            utils.plot_signal(results_array['BP True'][i].bp_signal, f'true_signal_{i}', is_ppg=False)
             """Plot 10 False window"""
-            utils.plot_signal(self.results_array['PPG False'][i].ppg_signal, f'false_signal_{i}', is_ppg=True)
-            utils.plot_signal(self.results_array['BP False'][i].bp_signal, f'false_signal_{i}', is_ppg=False)
+            utils.plot_signal(results_array['PPG False'][i].ppg_signal, f'false_signal_{i}', is_ppg=True)
+            utils.plot_signal(results_array['BP False'][i].bp_signal, f'false_signal_{i}', is_ppg=False)
 
-        print(f"Results -\nBP True signals: {len(self.results_array['BP True'])}\n"
-              f"BP False signals: {len(self.results_array['BP False'])}\n"
-              f"PPG True signals: {len(self.results_array['PPG True'])}\n"
-              f"PPG False signals: {len(self.results_array['PPG False'])}\n"
+        print(f"Results -\nBP True signals: {len(results_array['BP True'])}\n"
+              f"BP False signals: {len(results_array['BP False'])}\n"
+              f"PPG True signals: {len(results_array['PPG True'])}\n"
+              f"PPG False signals: {len(results_array['PPG False'])}\n"
               f"Valid Windows: {valid_windows}\n")
 
 
 def main():
     clf = ClassifyPlatform()
     clf.load_models()
-    win_list = utils.load_list()
-    clf.test_platform(win_list)
+
+    """ Test Platform """
+    # win_list = utils.load_list()
+    # clf.test_platform(win_list)
+
+    """ Classify Dataset """
+
 
 
 if __name__ == "__main__":

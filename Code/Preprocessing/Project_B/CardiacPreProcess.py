@@ -7,6 +7,7 @@ import Config as cfg
 import Plot as plot
 import Trainer
 
+
 def classify_target(signal_flags):
     quality_percent = (np.count_nonzero(signal_flags) / len(signal_flags)) * 100
     high_tresh = int(cfg.HIGH_THRESH)
@@ -33,7 +34,7 @@ def preprocess_data(data):
         bp_flags = np.array(record['AlineFlag'])
         sig_len = len(ppg_signal)
         window_in_sec = 30
-        i = 0
+        win_num = 0
 
         start_point = 0
         end_point = start_point + (window_in_sec * cfg.FREQUENCY)
@@ -47,7 +48,7 @@ def preprocess_data(data):
             if np.count_nonzero(np.isnan(win_ppg_signal)) or np.count_nonzero(np.isnan(win_bp_signal)):
                 start_point += new_samples_per_step
                 end_point += new_samples_per_step
-                print(f"invalid window {name}_{win_counter}")
+                print(f"invalid window {name}_{win_num}")
                 continue
 
             win_ppg_flags = ppg_flags[start_point:end_point]
@@ -64,14 +65,17 @@ def preprocess_data(data):
 
             start_point += new_samples_per_step
             end_point += new_samples_per_step
+            sys_bp, dias_bp = utils.bp_detection(win_bp_signal)
 
             new_win = utils.Window(win_ppg_signal, win_bp_signal, win_ppg_target,
-                             win_bp_target, win_bp_sqi, win_ppg_sqi, win_name = f'{name}_{i}')
-            i += 1
+                                   win_bp_target, win_bp_sqi, win_ppg_sqi,
+                                   win_name = f'{name}_{win_num}', sys_bp=sys_bp, dias_bp=dias_bp)
+            win_num += 1
 
             win_list += [new_win]
 
     return win_list
+
 
 def load_files():
     data = {}
