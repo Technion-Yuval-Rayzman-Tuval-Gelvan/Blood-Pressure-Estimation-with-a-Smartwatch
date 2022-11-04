@@ -1,4 +1,5 @@
 import logging
+import warnings
 
 from tqdm import tqdm
 import heartpy as hp
@@ -6,7 +7,6 @@ import Utils as utils
 import Config as cfg
 import Plot as plot
 import Trainer
-from Code.Preprocessing.Project_B.Logger import TqdmLoggingHandler
 from SQI import SQI
 import copy
 import pickle
@@ -16,6 +16,7 @@ import os
 import pandas as pd
 from matplotlib import pyplot as plt
 from Code.Preprocessing.Project_B.ClassifyPlatform import ClassifyPlatform
+
 if cfg.TRAIN_MODELS is False:
     from Code.Preprocessing.Project_B.MimicPreProcess import classify_target
 
@@ -38,7 +39,7 @@ class DatasetCreator:
         print("Load Records List")
         with open(file_name, 'rb') as file:
             records_list = pickle.load(file)
-        print(f"Load Done. Num Records: {len(records_list)}")
+        print(f"Load Done. Num Patients: {len(records_list)}")
 
         sampled_records_list = []
         if not cfg.ALL_PATIENTS:
@@ -51,12 +52,12 @@ class DatasetCreator:
 
             sampled_records_list = np.concatenate(np.array(sampled_records_list))
         else:
-            sampled_records_list = records_list
+            sampled_records_list = np.concatenate(np.array(records_list))
 
         print("Loading Records..")
         pool = Pool()
         for valid_windows in tqdm(pool.imap(func=self.create_record_dataset, iterable=sampled_records_list),
-                                   total=len(sampled_records_list)):
+                                  total=len(sampled_records_list)):
             if cfg.TRAIN_MODELS:
                 self.windows_list += valid_windows
 
@@ -109,7 +110,6 @@ class DatasetCreator:
                         # Classify window with the trained models
                         bp_platform_valid, ppg_platform_valid = self.classify_platform.valid_win(new_win)
                         if bp_platform_valid and ppg_platform_valid and new_win.ppg_target == utils.Label.good:
-
                             # save spectogram of the valid window
                             window_to_spectogram(new_win)
 
@@ -131,7 +131,6 @@ class DatasetCreator:
 
 
 def is_nan_value(bp_signal, ppg_signal, bp_ski, ppg_ski):
-
     if np.count_nonzero(np.isnan(ppg_signal)) or np.count_nonzero(np.isnan(bp_signal)) \
             or np.count_nonzero(np.isnan(ppg_ski)) or np.count_nonzero(np.isnan(bp_ski)):
         return True
@@ -140,9 +139,8 @@ def is_nan_value(bp_signal, ppg_signal, bp_ski, ppg_ski):
 
 
 def window_to_spectogram(win):
-
     ppg_signal = win.ppg_signal
-    fs =cfg.FREQUENCY
+    fs = cfg.FREQUENCY
     noverlap = 0.96 * cfg.STFT_WIN_SIZE
     plt.specgram(ppg_signal, Fs=fs, scale='dB', NFFT=cfg.STFT_WIN_SIZE, noverlap=noverlap)
     plt.axis(ymin=cfg.FREQUENCY_START, ymax=cfg.FREQUENCY_END)
@@ -155,7 +153,6 @@ def window_to_spectogram(win):
 
 
 def create_window(win_ppg_signal, win_bp_signal, win_ppg_sqi, win_bp_sqi, record_name, num_win):
-
     win_ppg_target = classify_target(win_ppg_signal, cfg.FREQUENCY)
     win_bp_target = classify_target(win_bp_signal, cfg.FREQUENCY)
     sys_bp, dias_bp = utils.bp_detection(win_bp_signal)
@@ -183,10 +180,6 @@ def main():
 
 if __name__ == "__main__":
     cfg.DATASET_LOG.redirect_output()
-    log = logging.getLogger(cfg.DATASET_LOG)
-    log.setLevel(logging.INFO)
-    log.addHandler(TqdmLoggingHandler())
+    warnings.simplefilter(action='ignore')
     main()
     cfg.DATASET_LOG.close_log_file()
-
-

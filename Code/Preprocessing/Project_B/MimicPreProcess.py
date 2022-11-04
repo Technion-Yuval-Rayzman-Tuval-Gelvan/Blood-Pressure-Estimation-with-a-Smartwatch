@@ -14,7 +14,7 @@ import Trainer
 if cfg.TRAIN_MODELS is True:
     from Code.Preprocessing.Project_B.CreateDataset import DatasetCreator
 from SQI import SQI
-
+import warnings
 
 def classify_target(signal, fs):
     try:
@@ -108,5 +108,6 @@ def main():
 
 if __name__ == "__main__":
     cfg.LOG.redirect_output()
+    warnings.simplefilter(action='ignore', category=FutureWarning)
     main()
     cfg.LOG.close_log_file()
