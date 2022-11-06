@@ -37,7 +37,7 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
     epochs_no_improve = 0
     valid_loss_min = np.Inf
 
-    valid_loss_path = f"../../Variables/{model_name}_valid_loss_2"
+    valid_loss_path = f"{save_file_name}/{model_name}_valid_loss"
     if os.path.exists(valid_loss_path):
         print("Load loss:", valid_loss_path)
         valid_loss_min, best_epoch = load_data(valid_loss_path)
@@ -46,7 +46,7 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
     train_objective_list = [np.inf]
     val_objective_list = [np.inf]
 
-    lists_path = f"../../Variables/{model_name}_objective_lists_2"
+    lists_path = f"{save_file_name}/{model_name}_objective_lists"
     if os.path.exists(lists_path):
         print("Load lists:", lists_path)
         val_objective_list, train_objective_list = load_data(lists_path)
@@ -156,13 +156,13 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
                 if np.min(valid_loss) < valid_loss_min:
                     # Save model
                     print(f"Save better model. last valid loss: {valid_loss_min}. new valid loss: {np.min(valid_loss)}")
-                    torch.save(model.state_dict(), f'{np.min(valid_loss)}_{save_file_name}')
-                    save_data((val_objective_list, train_objective_list), f'{np.min(valid_loss)}_{lists_path}')
+                    torch.save(model.state_dict(), f'{save_file_name}/model_min_loss_{np.min(valid_loss)}')
+                    save_data((val_objective_list, train_objective_list), f'{save_file_name}/objective_list_{np.min(valid_loss)}')
                     # Track improvement
                     epochs_no_improve = 0
                     valid_loss_min = np.min(valid_loss)
                     best_epoch = epoch
-                    save_data((valid_loss_min, best_epoch), f'{np.min(valid_loss)}_{valid_loss_path}')
+                    save_data((valid_loss_min, best_epoch), f'{save_file_name}/valid_min_loss_{np.min(valid_loss)}')
 
                 # Otherwise increment count of epochs with no improvement
                 else:

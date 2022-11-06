@@ -7,6 +7,7 @@ import Utils as utils
 import Config as cfg
 import Plot as plot
 import Trainer
+from Code.Training.LoadData import arrange_folders
 from SQI import SQI
 import copy
 import pickle
@@ -57,7 +58,7 @@ class DatasetCreator:
         print("Loading Records..")
         pool = Pool()
         for valid_windows in tqdm(pool.imap(func=self.create_record_dataset, iterable=sampled_records_list),
-                                  total=len(sampled_records_list)):
+                                  total=len(sampled_records_list), mininterval=30):
             if cfg.TRAIN_MODELS:
                 self.windows_list += valid_windows
 
@@ -86,6 +87,10 @@ class DatasetCreator:
         ppg_signal = record.p_signal[:, ppg_index]
         num_win = 0
         valid_windows = []
+
+        dir_path = f"{cfg.DATASET_DIR}/{record.record_name}"
+        if os.path.exists(dir_path):
+            return
 
         while end_point < record.sig_len:
             win_ppg_signal = ppg_signal[start_point:end_point]
@@ -175,11 +180,16 @@ def main():
 
     """ Save spectograms """
     dc = DatasetCreator()
-    dc.create_dataset()
+    # dc.create_dataset()
+
+    """Split images to Test/Val/Test folders
+       Activate only if all patients in the same directory"""
+    data_path = cfg.DATASET_DIR
+    arrange_folders(data_path)
 
 
 if __name__ == "__main__":
-    cfg.DATASET_LOG.redirect_output()
+    # cfg.DATASET_LOG.redirect_output()
     warnings.simplefilter(action='ignore')
     main()
-    cfg.DATASET_LOG.close_log_file()
+    # cfg.DATASET_LOG.close_log_file()

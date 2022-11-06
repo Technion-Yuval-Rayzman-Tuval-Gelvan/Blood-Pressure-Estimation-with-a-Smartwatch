@@ -11,7 +11,11 @@ class Dataset(enum.Enum):
     mimic = 0
     cardiac = 1
 
-# EXPERIMENT = ''
+
+class BPType(enum.Enum):
+    diastolic = 0
+    systolic = 1
+
 
 # ------------------------------------------------
 #                   CONFIG
@@ -28,6 +32,7 @@ HIGH_THRESH = 100
 LOW_THRESH = 70
 WINDOWS_PER_LABEL = 8000
 TRAIN_MODELS = False
+TRAIN_NN = True
 SIGNAL_TYPE = 'ppg'  # ppg or bp
 EXP_DIR = f'{SIGNAL_TYPE}_thresh_{HIGH_THRESH}_{LOW_THRESH}'
 TRUE_PPG_SCORE = 2 # Mah + LDA + QDA + SVM ( score can be - [-4, -2, 0, 2, 4])
@@ -36,16 +41,16 @@ FREQUENCY_END = 12
 FREQUENCY_START = 0
 STFT_WIN_SIZE = 750
 
+# datetime object containing current date and time
+now = datetime.now()
+TIME = now.strftime("%d_%m_%Y_%H_%M_%S")
+
 # ------------------------------------------------
 #                   Directories
 # ------------------------------------------------
 BASE_DIR = '/host/media/tuvalgelvan@staff.technion.ac.il/HD34/Estimated-Blood-Pressure-Project'
 MIMIC_LOAD_DIR = f'{BASE_DIR}/mimic3wdb/1.0'
 CARDIAC_LOAD_DIR = f'{BASE_DIR}/cardiac_data/Technion_Synched_Data'
-
-# datetime object containing current date and time
-now = datetime.now()
-TIME = now.strftime("%d_%m_%Y_%H_%M_%S")
 TIME_DIR = f'Experiments/{TIME}'
 
 if DATASET == Dataset.mimic:
@@ -68,14 +73,21 @@ MODELS_DIR = f'{DATA_DIR}/{TIME_DIR}/models'
 PPG_MODELS_LOAD_DIR = f'{BASE_DIR}/mimic_data/ppg_thresh_100_70/Final_results/Final_Results_26_10/models'
 BP_MODELS_LOAD_DIR = f'{BASE_DIR}/mimic_data/bp_thresh_100_70/Final_results/Final_result_27_10_2022_15_21_19/models'
 DATASET_DIR = f'{BASE_DIR}/Data'
+NN_MODELS = f'{BASE_DIR}/nn_models'
+DIAS_BP_MODEL_DIR = f'{NN_MODELS}/Dias/{TIME_DIR}'
+SYS_BP_MODEL_DIR = f'{NN_MODELS}/Sys/{TIME_DIR}'
 
 CLASSIFY_DIRS = [CLASSIFY_PLATFORM_DIR, CLASSIFIED_PLOTS]
 TRAINING_DIRS = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR, SVM_DIR, LDA_DIR, QDA_DIR, MAH_DIR, MODELS_DIR, DATASET_DIR]
+NN_TRAIN_DIRS = [DIAS_BP_MODEL_DIR, SYS_BP_MODEL_DIR]
 
-if TRAIN_MODELS is True:
-    dir_list = TRAINING_DIRS
+if TRAIN_NN is True:
+    dir_list = NN_TRAIN_DIRS
 else:
-    dir_list = CLASSIFY_DIRS
+    if TRAIN_MODELS is True:
+        dir_list = TRAINING_DIRS
+    else:
+        dir_list = CLASSIFY_DIRS
 
 for output_dir in dir_list:
     if not os.path.exists(output_dir):

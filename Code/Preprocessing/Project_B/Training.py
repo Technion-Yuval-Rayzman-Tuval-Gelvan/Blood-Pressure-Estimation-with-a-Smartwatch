@@ -1,0 +1,105 @@
+import copy
+import pickle
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import torch
+import torch.nn as nn
+import torchvision
+import tqdm
+import time
+from datetime import datetime
+import sys, os
+import Config as cfg
+from Code.Training import ResNet, HDF5DataLoader
+from Code.Training.Training import get_device, train_model, plot_results, load_data, fine_tuning
+
+
+def main():
+    """Paths"""
+    data_path = cfg.DATASET_DIR
+    model_path = cfg.NN_MODELS
+
+    date = datetime.now()
+
+    """Get Device"""
+    device = get_device()
+
+    # print("****** Fine Tuning Dias Model ******")
+    # model = ResNet.create_resnet_model().to(device)
+    # model_name = 'dias_model'
+    # save_file_name = f'../../Models/HDF5_Models/fine_tuning_{date}_{model_name}.pt'
+    # if os.path.exists(save_file_name):
+    #     # Load the best state dict
+    #     model.load_state_dict(torch.load(save_file_name))
+    #
+    # train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', 6)
+    # val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', 2)
+    # fine_tuning(model, train_loader, val_loader, model_name, save_file_name)
+
+    print("****** Train Dias Model ******")
+    model = ResNet.create_resnet_model().to(device)
+    model_name = 'dias_model'
+    dias_save_file_name = cfg.DIAS_BP_MODEL_DIR
+    if os.path.exists(dias_save_file_name):
+        # Load the best state dict
+        print("Load model:", dias_save_file_name)
+        model.load_state_dict(torch.load(dias_save_file_name))
+
+    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
+    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
+    train_model(model, train_loader, val_loader, model_name, dias_save_file_name)
+
+    print("****** Train Sys Model ******")
+    model = ResNet.create_resnet_model().to(device)
+    model_name = 'sys_model'
+    sys_save_file_name = cfg.SYS_BP_MODEL_DIR
+    if os.path.exists(sys_save_file_name):
+        # Load the best state dict
+        model.load_state_dict(torch.load(sys_save_file_name))
+
+    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
+    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
+    train_model(model, train_loader, val_loader, model_name, sys_save_file_name)
+
+    # print("****** Check Test Score *******")
+    # """Load Dias Model"""
+    # model = ResNet.create_resnet_model().to(device)
+    # model_name = 'dias_model'
+    # if os.path.exists(dias_save_file_name):
+    #     # Load the best state dict
+    #     print(f"Load Model: {dias_save_file_name}")
+    #     model.load_state_dict(torch.load(dias_save_file_name))
+    #
+    # test_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Test')
+    # calculate_test_score(model, test_loader, model_name)
+    #
+    # """Load Sys Model"""
+    # model = ResNet.create_resnet_model().to(device)
+    # model_name = 'sys_model'
+    # if os.path.exists(sys_save_file_name):
+    #     # Load the best state dict
+    #     print(f"Load Model: {sys_save_file_name}")
+    #     model.load_state_dict(torch.load(sys_save_file_name))
+    #
+    # test_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Test')
+    # calculate_test_score(model, test_loader, model_name)
+
+    print(""" Print Results""")
+    model_name = 'dias_model'
+    lists_path = f"{dias_save_file_name}/{model_name}_objective_lists"
+    if os.path.exists(lists_path):
+        print("Load lists:", lists_path)
+        val_objective_list, train_objective_list = load_data(lists_path)
+    plot_results(train_objective_list[:100], val_objective_list[:100], model_name)
+
+    model_name = 'sys_model'
+    lists_path = f"{sys_save_file_name}/{model_name}_objective_lists"
+    if os.path.exists(lists_path):
+        print("Load lists:", lists_path)
+        val_objective_list, train_objective_list = load_data(lists_path)
+    plot_results(train_objective_list[:100], val_objective_list[:100], model_name)
+
+
+if __name__ == "__main__":
+    main()

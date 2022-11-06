@@ -16,6 +16,7 @@ if cfg.TRAIN_MODELS is True:
 from SQI import SQI
 import warnings
 
+
 def classify_target(signal, fs):
     try:
         wd, m = hp.process(signal, fs)

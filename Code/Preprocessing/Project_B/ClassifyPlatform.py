@@ -128,7 +128,6 @@ def main():
     """ Classify Dataset """
 
 
-
 if __name__ == "__main__":
     cfg.CLASSIFICATION_LOG.redirect_output()
     main()
