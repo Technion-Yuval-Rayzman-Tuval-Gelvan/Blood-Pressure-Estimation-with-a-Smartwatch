@@ -1,5 +1,6 @@
 import logging
 import warnings
+import time
 
 from tqdm import tqdm
 import heartpy as hp
@@ -7,7 +8,7 @@ import Utils as utils
 import Config as cfg
 import Plot as plot
 import Trainer
-from Code.Training.LoadData import arrange_folders
+# from Code.Training.LoadData import arrange_folders
 from SQI import SQI
 import copy
 import pickle
@@ -56,9 +57,16 @@ class DatasetCreator:
             sampled_records_list = np.concatenate(np.array(records_list))
 
         print("Loading Records..")
+        records_counter = 0
+        start = time.time()
         pool = Pool()
-        for valid_windows in tqdm(pool.imap(func=self.create_record_dataset, iterable=sampled_records_list),
-                                  total=len(sampled_records_list), mininterval=30):
+        for valid_windows in pool.imap(func=self.create_record_dataset, iterable=sampled_records_list):
+            records_counter += 1
+
+            if records_counter % 50 == 0:
+                print(f"\rRecords Done: {records_counter}/{len(sampled_records_list)}\t{100 * (records_counter) / len(sampled_records_list):.2f}% complete. {(time.time() - start):.2f} seconds elapsed.",
+                    end='')
+
             if cfg.TRAIN_MODELS:
                 self.windows_list += valid_windows
 
@@ -180,12 +188,12 @@ def main():
 
     """ Save spectograms """
     dc = DatasetCreator()
-    # dc.create_dataset()
+    dc.create_dataset()
 
     """Split images to Test/Val/Test folders
        Activate only if all patients in the same directory"""
     data_path = cfg.DATASET_DIR
-    arrange_folders(data_path)
+    # arrange_folders(data_path)
 
 
 if __name__ == "__main__":

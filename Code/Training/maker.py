@@ -76,16 +76,19 @@ def make_hdf5_files(out_dir, images_glob, shuffle=True, num_per_shard=1000, max_
                 print('Creating {} [{}/{}]...'.format(shard_p, shard_number, num_shards_total))
                 writer = h5py.File(shard_p, 'w')
                 shard_ps.append(shard_p)
+
+            ## Yuval & Tuval edit
             image = Image.open(image_p).convert('RGB')
-            dias_label = np.float16(image_p.split("_")[-1][:-4])
+            dias_label = np.float16(image_p.split("_")[-1][:-4])  # remove .png
             sys_label = np.float16(image_p.split("_")[-2])
             image = np.array(image, np.uint8).transpose((2, 0, 1))
             assert image.shape[0] == 3
-            index = str(count % num_per_shard)  # expected by HDF5DataLoader, TODO: document
+            index = str(count % num_per_shard)  # expected by HDF5DataLoader
             writer.create_dataset(f"image_{index}", data=image)
             writer.create_dataset(f"dias_label_{index}", data=dias_label)
             writer.create_dataset(f"sys_label_{index}", data=sys_label)
             progress_printer.update((count % num_per_shard) / num_per_shard)
+
     if writer:
         writer.close()
         assert len(shard_ps)
@@ -135,6 +138,9 @@ def main(args):
                         '`out_dir` is removed first!')
     flags = p.parse_args(args)
     make_hdf5_files(**flags.__dict__)
+
+    """Example: python maker.py -out_dir <out_dir> -images_glob <images_dir> --shuffle 1 --num_per_shared 20000 
+    --max_shards 100"""
 
 
 if __name__ == '__main__':
