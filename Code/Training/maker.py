@@ -44,7 +44,7 @@ def make_hdf5_files(out_dir, images_glob, shuffle=True, num_per_shard=1000, max_
         f.write(info_str + '\n')
 
     print('Getting images...')
-    image_ps = sorted(glob.glob(images_glob))
+    image_ps = sorted(glob.glob(images_glob, recursive=True))
     assert len(image_ps) > 0, 'No matches for {}'.format(images_glob)
     print('Found {} images'.format(len(image_ps)))
 
@@ -139,7 +139,7 @@ def main(args):
     flags = p.parse_args(args)
     make_hdf5_files(**flags.__dict__)
 
-    """Example: python maker.py -out_dir <out_dir> -images_glob <images_dir> --shuffle 1 --num_per_shared 20000 
+    """Example: python maker.py out_dir <out_dir> images_glob <images_dir> --shuffle 1 --num_per_shared 20000 
     --max_shards 100"""
 
 

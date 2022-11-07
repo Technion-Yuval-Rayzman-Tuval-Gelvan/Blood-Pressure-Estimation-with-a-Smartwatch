@@ -60,7 +60,8 @@ class DatasetCreator:
         records_counter = 0
         start = time.time()
         pool = Pool()
-        for valid_windows in pool.imap(func=self.create_record_dataset, iterable=sampled_records_list):
+        for valid_windows in tqdm(pool.imap(func=self.create_record_dataset, iterable=sampled_records_list),
+                                  total=len(sampled_records_list), mininterval=30):
             records_counter += 1
 
             if records_counter % 50 == 0:
@@ -163,11 +164,13 @@ def window_to_spectogram(win):
         os.makedirs(dir_path)
     if not os.path.exists(f"{dir_path}/{record_name}_{win.sys_bp}_{win.dias_bp}.png"):
         plt.savefig(f"{dir_path}/{record_name}_{win.sys_bp}_{win.dias_bp}.png")
+    plt.close()
 
 
 def create_window(win_ppg_signal, win_bp_signal, win_ppg_sqi, win_bp_sqi, record_name, num_win):
     win_ppg_target = classify_target(win_ppg_signal, cfg.FREQUENCY)
-    win_bp_target = classify_target(win_bp_signal, cfg.FREQUENCY)
+    # win_bp_target = classify_target(win_bp_signal, cfg.FREQUENCY)
+    win_bp_target = None
     sys_bp, dias_bp = utils.bp_detection(win_bp_signal)
 
     new_win = utils.Window(win_ppg_signal, win_bp_signal, win_ppg_target,

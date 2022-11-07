@@ -86,25 +86,25 @@ def main():
     plot.label_histogram(win_dict)
     plot.features_histogram(win_dict)
 
-    # with pd.ExcelWriter(f'{cfg.DATA_DIR}/{cfg.TIME_DIR}/accuracy.xlsx') as excel_writer:
-    #
-    #     """good/mid"""
-    #     print("************************* Good / Mid **************************************")
-    #     trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.mid,
-    #                               win_dict=win_dict, excel_writer=excel_writer)
-    #     trainer.run()
-    #
-    #     """good/bad"""
-    #     print("************************* Good / Bad **************************************")
-    #     trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.bad,
-    #                               win_dict=win_dict, excel_writer=excel_writer)
-    #     trainer.run()
-    #
-    #     """mid/bad"""
-    #     print("************************* Mid / Bad **************************************")
-    #     trainer = Trainer.Trainer(true_label=utils.Label.mid, false_label=utils.Label.bad,
-    #                               win_dict=win_dict, excel_writer=excel_writer)
-    #     trainer.run()
+    with pd.ExcelWriter(f'{cfg.DATA_DIR}/{cfg.TIME_DIR}/accuracy.xlsx') as excel_writer:
+
+        """good/mid"""
+        print("************************* Good / Mid **************************************")
+        trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.mid,
+                                  win_dict=win_dict, excel_writer=excel_writer)
+        trainer.run()
+
+        """good/bad"""
+        print("************************* Good / Bad **************************************")
+        trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.bad,
+                                  win_dict=win_dict, excel_writer=excel_writer)
+        trainer.run()
+
+        """mid/bad"""
+        print("************************* Mid / Bad **************************************")
+        trainer = Trainer.Trainer(true_label=utils.Label.mid, false_label=utils.Label.bad,
+                                  win_dict=win_dict, excel_writer=excel_writer)
+        trainer.run()
 
 
 if __name__ == "__main__":
