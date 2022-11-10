@@ -5,10 +5,6 @@ import random
 import numpy as np
 
 
-# TODO:
-# - update docstrings
-
-
 class ArrayCenterCrop(object):
     def __init__(self, size):
         if isinstance(size, numbers.Number):

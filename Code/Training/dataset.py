@@ -3,9 +3,9 @@ import random
 import pickle
 import h5py
 from torch.utils.data import Dataset
-from maker import NUM_PER_SHARD_PKL
 import numpy as np
 
+from Code.Training import maker
 
 default_opener = lambda p_: h5py.File(p_, 'r')
 
@@ -17,7 +17,7 @@ class HDF5Dataset(Dataset):
                  shuffle_shards=True,
                  opener=default_opener,
                  seed=123,
-                 max_chuncks = None):
+                 max_chuncks=None):
         """
         :param file_ps: list of file paths to .hdf5 files. Last (alphabetically) file is expected to contain less
         images.
@@ -55,9 +55,10 @@ class HDF5Dataset(Dataset):
         idx_in_shard = index % self.num_per_shard
         dias_index = f"dias_label_{idx_in_shard}"
         sys_index = f"sys_label_{idx_in_shard}"
+        img_index = f"image_{idx_in_shard}"
         shard_p = self.ps[shard_idx]
         with self.opener(shard_p) as f:
-            image = np.array(f[str(idx_in_shard)])
+            image = np.array(f[img_index])
             dias_label = np.float16(f[dias_index])
             sys_label = np.float16(f[sys_index])
             image = self.transform(image)  # must turn to array
@@ -94,13 +95,13 @@ class HDF5Dataset(Dataset):
             if num_per_shard_prev < num_per_shard:
                 raise ValueError('Expected all shards to have the same number of elements,'
                                  'except last one. Previous had {} elements, current ({}) has {}!'.format(
-                                    num_per_shard_prev, p, num_per_shard))
+                    num_per_shard_prev, p, num_per_shard))
             if num_per_shard_prev > num_per_shard:  # assuming this is the last
                 is_last = i == len(file_ps) - 1
                 if not is_last:
                     raise ValueError(
-                            'Found shard with too few elements, and it is not the last one! {}\n'
-                            'Last: {}\n'.format(p, file_ps[-1]))
+                        'Found shard with too few elements, and it is not the last one! {}\n'
+                        'Last: {}\n'.format(p, file_ps[-1]))
                 print('Filtering shard {}, dropping {} elements...'.format(p, num_per_shard))
                 break  # is last anyways
             else:  # same numer as before, all good
@@ -110,7 +111,7 @@ class HDF5Dataset(Dataset):
 
 def get_num_in_shard(shard_p, opener=default_opener):
     hdf5_root = os.path.dirname(shard_p)
-    p_to_num_per_shard_p = os.path.join(hdf5_root, NUM_PER_SHARD_PKL)
+    p_to_num_per_shard_p = os.path.join(hdf5_root, maker.NUM_PER_SHARD_PKL)
     # Speeds up filtering massively on slow file systems...
     if os.path.isfile(p_to_num_per_shard_p):
         with open(p_to_num_per_shard_p, 'rb') as f:

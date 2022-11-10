@@ -40,6 +40,7 @@ TRUE_BP_SCORE = 0 # Mah + LDA + QDA + SVM ( score can be - [-4, -2, 0, 2, 4])
 FREQUENCY_END = 12
 FREQUENCY_START = 0
 STFT_WIN_SIZE = 750
+NUM_PER_SHARD = 20000
 
 # datetime object containing current date and time
 now = datetime.now()
@@ -72,10 +73,10 @@ MAH_DIR = f'{DATA_DIR}/{TIME_DIR}/mah_plots'
 MODELS_DIR = f'{DATA_DIR}/{TIME_DIR}/models'
 PPG_MODELS_LOAD_DIR = f'{BASE_DIR}/mimic_data/ppg_thresh_100_70/Final_results/Final_Results_26_10/models'
 BP_MODELS_LOAD_DIR = f'{BASE_DIR}/mimic_data/bp_thresh_100_70/Final_results/Final_result_27_10_2022_15_21_19/models'
-DATASET_DIR = f'{BASE_DIR}/Data'
+DATASET_DIR = f'{BASE_DIR}/NN_Data'
 NN_MODELS = f'{BASE_DIR}/nn_models'
-DIAS_BP_MODEL_DIR = f'{NN_MODELS}/Dias/{TIME_DIR}'
-SYS_BP_MODEL_DIR = f'{NN_MODELS}/Sys/{TIME_DIR}'
+DIAS_BP_MODEL_DIR = f'{NN_MODELS}/{TIME_DIR}/Dias'
+SYS_BP_MODEL_DIR = f'{NN_MODELS}/{TIME_DIR}/Sys'
 
 CLASSIFY_DIRS = [CLASSIFY_PLATFORM_DIR, CLASSIFIED_PLOTS]
 TRAINING_DIRS = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR, SVM_DIR, LDA_DIR, QDA_DIR, MAH_DIR, MODELS_DIR, DATASET_DIR]
@@ -100,6 +101,7 @@ USER_CMD = None
 LOG = Logger(f'{DATA_DIR}/{TIME_DIR}/output.log')
 CLASSIFICATION_LOG = Logger(f'{CLASSIFIED_PLOTS}/output.log')
 DATASET_LOG = Logger(f'{DATASET_DIR}/output.log')
+NN_LOG = Logger(f'{NN_MODELS}/{TIME_DIR}/output.log')
 # ------------------------------------------------
 #                Init and Defines
 # ------------------------------------------------

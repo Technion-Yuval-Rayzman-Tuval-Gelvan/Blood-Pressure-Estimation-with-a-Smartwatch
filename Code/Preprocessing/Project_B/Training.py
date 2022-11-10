@@ -1,5 +1,7 @@
 import copy
 import pickle
+import warnings
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -19,10 +21,6 @@ def main():
     """Paths"""
     data_path = cfg.DATASET_DIR
     model_path = cfg.NN_MODELS
-
-    date = datetime.now()
-
-    """Get Device"""
     device = get_device()
 
     # print("****** Fine Tuning Dias Model ******")
@@ -40,7 +38,7 @@ def main():
     print("****** Train Dias Model ******")
     model = ResNet.create_resnet_model().to(device)
     model_name = 'dias_model'
-    dias_save_file_name = cfg.DIAS_BP_MODEL_DIR
+    dias_save_file_name = f"{cfg.DIAS_BP_MODEL_DIR}/resnet_model.pt"
     if os.path.exists(dias_save_file_name):
         # Load the best state dict
         print("Load model:", dias_save_file_name)
@@ -53,7 +51,7 @@ def main():
     print("****** Train Sys Model ******")
     model = ResNet.create_resnet_model().to(device)
     model_name = 'sys_model'
-    sys_save_file_name = cfg.SYS_BP_MODEL_DIR
+    sys_save_file_name = f"{cfg.SYS_BP_MODEL_DIR}/resnet_model.pt"
     if os.path.exists(sys_save_file_name):
         # Load the best state dict
         model.load_state_dict(torch.load(sys_save_file_name))
@@ -102,4 +100,7 @@ def main():
 
 
 if __name__ == "__main__":
+    cfg.NN_LOG.redirect_output()
+    warnings.simplefilter(action='ignore')
     main()
+    cfg.NN_LOG.close_log_file()

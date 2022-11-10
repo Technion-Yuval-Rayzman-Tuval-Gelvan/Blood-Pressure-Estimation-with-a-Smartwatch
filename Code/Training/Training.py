@@ -13,13 +13,13 @@ from torch.autograd import Variable
 from torchvision import datasets, models, transforms
 from datetime import datetime
 import sys, os
+
+from Code.Training import ResNet, HDF5DataLoader
+
 sys.path.append(os.path.abspath(os.path.join('..', 'LoadData')))
 sys.path.append(os.path.abspath(os.path.join('..', 'ResNet')))
 sys.path.append(os.path.abspath(os.path.join('..', 'HDF5DataLoader')))
 # Now do your import
-import LoadData
-import ResNet
-import HDF5DataLoader
 
 # Set some default values of the the matplotlib plots
 plt.rcParams['figure.figsize'] = (8.0, 8.0)  # Set default plot's sizes
@@ -361,8 +361,8 @@ def main():
     print("****** Train Dias Model ******")
     model = ResNet.create_resnet_model().to(device)
     model_name = 'dias_model'
-    # save_file_name = f'../../Models/HDF5_Models/{date}_{model_name}.pt'
-    dias_save_file_name = f'../../Models/HDF5_Models/2021-12-21_dias_model.pt'
+    dias_save_file_name = f'../../Models/HDF5_Models/{date}_{model_name}.pt'
+    # dias_save_file_name = f'../../Models/HDF5_Models/2021-12-21_dias_model.pt'
     if os.path.exists(dias_save_file_name):
         # Load the best state dict
         print("Load model:", dias_save_file_name)

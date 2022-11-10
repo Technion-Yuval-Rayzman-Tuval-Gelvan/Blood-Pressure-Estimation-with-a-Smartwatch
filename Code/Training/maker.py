@@ -8,9 +8,9 @@ import numpy as np
 import random
 import h5py
 import os
-import printing
+# import printing
 from PIL import Image
-
+from Code.Training import printing
 
 NUM_PER_SHARD_PKL = 'num_per_shard.pkl'
 

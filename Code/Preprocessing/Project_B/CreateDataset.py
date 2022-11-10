@@ -8,7 +8,7 @@ import Utils as utils
 import Config as cfg
 import Plot as plot
 import Trainer
-# from Code.Training.LoadData import arrange_folders
+from Code.Training.LoadData import arrange_folders
 from SQI import SQI
 import copy
 import pickle
@@ -190,13 +190,13 @@ def main():
     #     save_records_list()
 
     """ Save spectograms """
-    dc = DatasetCreator()
-    dc.create_dataset()
+    # dc = DatasetCreator()
+    # dc.create_dataset()
 
     """Split images to Test/Val/Test folders
        Activate only if all patients in the same directory"""
     data_path = cfg.DATASET_DIR
-    # arrange_folders(data_path)
+    arrange_folders(data_path)
 
 
 if __name__ == "__main__":
