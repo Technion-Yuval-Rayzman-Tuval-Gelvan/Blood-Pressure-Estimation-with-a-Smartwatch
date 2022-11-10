@@ -38,11 +38,12 @@ def main():
     print("****** Train Dias Model ******")
     model = ResNet.create_resnet_model().to(device)
     model_name = 'dias_model'
-    dias_save_file_name = f"{cfg.DIAS_BP_MODEL_DIR}/resnet_model.pt"
-    if os.path.exists(dias_save_file_name):
+    dias_save_file_name = cfg.DIAS_BP_MODEL_DIR
+    dias_model_path = f"{dias_save_file_name}/resnet_model.pt"
+    if os.path.exists(dias_model_path):
         # Load the best state dict
-        print("Load model:", dias_save_file_name)
-        model.load_state_dict(torch.load(dias_save_file_name))
+        print("Load model:", dias_model_path)
+        model.load_state_dict(torch.load(model_path))
 
     train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
     val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
@@ -51,10 +52,11 @@ def main():
     print("****** Train Sys Model ******")
     model = ResNet.create_resnet_model().to(device)
     model_name = 'sys_model'
-    sys_save_file_name = f"{cfg.SYS_BP_MODEL_DIR}/resnet_model.pt"
-    if os.path.exists(sys_save_file_name):
+    sys_save_file_name = cfg.SYS_BP_MODEL_DIR
+    sys_model_path = f"{dias_save_file_name}/resnet_model.pt"
+    if os.path.exists(sys_model_path):
         # Load the best state dict
-        model.load_state_dict(torch.load(sys_save_file_name))
+        model.load_state_dict(torch.load(sys_model_path))
 
     train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
     val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
@@ -100,7 +102,7 @@ def main():
 
 
 if __name__ == "__main__":
-    cfg.NN_LOG.redirect_output()
+    # cfg.NN_LOG.redirect_output()
     warnings.simplefilter(action='ignore')
     main()
-    cfg.NN_LOG.close_log_file()
+    # cfg.NN_LOG.close_log_file()

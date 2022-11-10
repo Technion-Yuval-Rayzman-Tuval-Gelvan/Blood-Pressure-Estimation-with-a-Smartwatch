@@ -23,7 +23,7 @@ def get_hdf5_dataset(data_path, model_name, folder, batch_size=1, max_chuncks=No
     ds = dataset.HDF5Dataset(all_file_ps, transform=transform_hdf5, model_name=model_name, max_chuncks=max_chuncks)
 
     # using the standard PyTorch DataLoader
-    dl = DataLoader(ds, batch_size=batch_size, num_workers=8)
+    dl = DataLoader(ds, batch_size=batch_size, num_workers=4)
 
     print("Num Images in Dataset:", len(ds))
     print("Example Image and Label:", ds[0])

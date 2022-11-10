@@ -157,7 +157,7 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
                     # Save model
                     print(f"Save better model. last valid loss: {valid_loss_min}. new valid loss: {np.min(valid_loss)}")
                     torch.save(model.state_dict(), f'{save_file_name}/model_min_loss_{np.min(valid_loss)}')
-                    save_data((val_objective_list, train_objective_list), f'{save_file_name}/objective_list_{np.min(valid_loss)}')
+                    save_data((val_objective_list, train_objective_list), lists_path)
                     # Track improvement
                     epochs_no_improve = 0
                     valid_loss_min = np.min(valid_loss)
@@ -219,7 +219,7 @@ def train_model(model, train_loader, val_loader, model_name, save_file_name):
     plot_results(train_objective_list, val_objective_list, model_name)
 
 
-def plot_results(train_objective_list, val_objective_list, model_name):
+def plot_results(train_objective_list, val_objective_list, model_name, save_file_name=None):
     # Plot
     fig, ax = plt.subplots(figsize=(5, 5))
     ax.plot(np.arange(len(train_objective_list)), train_objective_list, label='Train')
@@ -227,10 +227,13 @@ def plot_results(train_objective_list, val_objective_list, model_name):
     ax.set_xlabel('Iterations')
     ax.set_ylabel('Objective')
 
-    # dd/mm/YY H:M:S
-    now = datetime.now()
-    dt_string = now.strftime("%d/%m/%Y_%H:%M:%S")
-    plt.savefig(f'../../Results/{model_name}/training_{now}.png')
+    # Project A
+    # # dd/mm/YY H:M:S
+    # now = datetime.now()
+    # dt_string = now.strftime("%d/%m/%Y_%H:%M:%S")
+    # plt.savefig(f'../../Results/{model_name}/training_{now}.png')
+
+    plt.savefig(f'{save_file_name}/training_results.png')
 
 
 def calculate_test_score(model, test_loader, model_name):
