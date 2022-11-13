@@ -117,7 +117,12 @@ def plot_win(win, name):
         print(f"Bad record: {name}")
         return
 
-    plt.savefig(f"{cfg.PLOT_DIR}/{name}.png")
+    save_dir = cfg.COMPARE_DIR if cfg.WORK_MODE == cfg.Mode.compare_results else cfg.PLOT_DIR
+
+    if not os.path.exists(os.path.dirname(f"{save_dir}/{name}.png")):
+        os.makedirs(os.path.dirname(f"{save_dir}/{name}.png"))
+
+    plt.savefig(f"{save_dir}/{name}.png")
 
 
 def plot_signal(signal, name, is_ppg):
@@ -200,3 +205,22 @@ def bp_valid(systolic_bp, diastolic_bp):
         return False
 
     return True
+
+
+def compare_heartpy_sqi_model(win, ppg_platform, ppg_heartpy):
+
+    # good model - bad heartpy
+    if ppg_platform and not ppg_heartpy == Label.good:
+        plot_win(win.ppg_signal, f'good_model_bad_heartpy/{win.win_name}')
+
+    # bad model - good heartpy
+    if not ppg_platform and ppg_heartpy == Label.good:
+        plot_win(win.ppg_signal, f'bad_model_good_heartpy/{win.win_name}')
+
+    # good model - good heartpy
+    if ppg_platform and ppg_heartpy == Label.good:
+        plot_win(win.ppg_signal, f'good_model_good_heartpy/{win.win_name}')
+
+    # bad model - bad heartpy
+    if not ppg_platform and not ppg_heartpy == Label.good:
+        plot_win(win.ppg_signal, f'bad_model_bad_heartpy/{win.win_name}')

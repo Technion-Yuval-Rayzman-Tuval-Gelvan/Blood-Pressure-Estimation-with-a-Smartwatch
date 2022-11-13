@@ -63,9 +63,8 @@ class HDF5Dataset(Dataset):
             sys_label = np.float16(f[sys_index])
             image = self.transform(image)  # must turn to array
             """Due to mistake in the order of the labels saving I take the opposite label"""
-            # Todo: after saving the images again correct the order
-            # label = dias_label if self.model_name == "dias_model" else sys_label
-            label = sys_label if self.model_name == "dias_model" else dias_label
+            label = dias_label if self.model_name == "dias_model" else sys_label
+            # label = sys_label if self.model_name == "dias_model" else dias_label
             self.counter += 1
             # print(self.counter)
         return image, label

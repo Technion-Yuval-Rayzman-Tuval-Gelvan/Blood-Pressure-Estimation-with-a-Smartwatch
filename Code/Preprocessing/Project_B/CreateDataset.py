@@ -1,7 +1,6 @@
 import logging
 import warnings
 import time
-
 from tqdm import tqdm
 import heartpy as hp
 import Utils as utils
@@ -48,7 +47,7 @@ class DatasetCreator:
             records_list = records_list[:cfg.NUM_PATIENTS]
 
             for patient_records in records_list:
-                np.random.seed(5)
+                np.random.seed(cfg.SEED)
                 sampled_records = np.random.choice(np.array(patient_records), cfg.TRAIN_RECORDS_PER_PATIENT)
                 sampled_records_list.append(sampled_records)
 
@@ -115,17 +114,28 @@ class DatasetCreator:
                 new_win = create_window(win_ppg_signal, win_bp_signal, win_ppg_sqi_list,
                                         win_bp_sqi_list, record.record_name, num_win)
 
-                if cfg.TRAIN_MODELS:
-                    if new_win.ppg_target is not None and new_win.bp_target is not None:
-                        valid_windows.append(new_win)
-                else:
-                    if utils.bp_valid(new_win.sys_bp, new_win.dias_bp):
+                match cfg.WORK_MODE:
+                    case cfg.Mode.train_sqi_models:
+                        if new_win.ppg_target is not None and new_win.bp_target is not None:
+                            valid_windows.append(new_win)
+                    case cfg.Mode.save_valid_data:
+                        if utils.bp_valid(new_win.sys_bp, new_win.dias_bp):
 
-                        # Classify window with the trained models
-                        bp_platform_valid, ppg_platform_valid = self.classify_platform.valid_win(new_win)
-                        if bp_platform_valid and ppg_platform_valid and new_win.ppg_target == utils.Label.good:
-                            # save spectogram of the valid window
-                            window_to_spectogram(new_win)
+                            # Classify window with the trained models
+                            bp_platform_valid, ppg_platform_valid = self.classify_platform.valid_win(new_win)
+                            if bp_platform_valid and ppg_platform_valid and new_win.ppg_target == utils.Label.good:
+                                # save spectogram of the valid window
+                                window_to_spectogram(new_win)
+                    case cfg.Mode.compare_results:
+                        if num_win < 10:
+                            # Classify window with the trained models
+                            bp_platform_valid, ppg_platform_valid = self.classify_platform.valid_win(new_win)
+
+                            utils.compare_heartpy_sqi_model(new_win, ppg_platform_valid, new_win.ppg_target)
+
+                    case _:
+                        raise("Choose valid work mode")
+
 
             start_point += new_samples_per_step
             end_point += new_samples_per_step
@@ -182,6 +192,7 @@ def create_window(win_ppg_signal, win_bp_signal, win_ppg_sqi, win_bp_sqi, record
 
 def main():
     assert cfg.TRAIN_MODELS == False and cfg.DATASET == cfg.Dataset.mimic
+    assert cfg.WORK_MODE == cfg.Mode.save_valid_data
 
     """save list of records"""
     # if cfg.MIN_RECORDS_PER_PATIENT > 0:
@@ -190,13 +201,13 @@ def main():
     #     save_records_list()
 
     """ Save spectograms """
-    # dc = DatasetCreator()
-    # dc.create_dataset()
+    dc = DatasetCreator()
+    dc.create_dataset()
 
     """Split images to Test/Val/Test folders
        Activate only if all patients in the same directory"""
-    data_path = cfg.DATASET_DIR
-    arrange_folders(data_path)
+    # data_path = cfg.DATASET_DIR
+    # arrange_folders(data_path)
 
 
 if __name__ == "__main__":

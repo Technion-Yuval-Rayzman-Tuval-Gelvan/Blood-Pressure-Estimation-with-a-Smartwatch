@@ -16,6 +16,11 @@ class BPType(enum.Enum):
     diastolic = 0
     systolic = 1
 
+class Mode(enum.Enum):
+    train_sqi_models = 0
+    save_valid_data = 1  # After training use models to classify and save valid data to NN module
+    compare_results = 2
+
 
 # ------------------------------------------------
 #                   CONFIG
@@ -25,9 +30,11 @@ DATASET = Dataset.mimic
 PLOT = False
 MAX_PLOT_PER_LABEL = 10
 MIN_RECORDS_PER_PATIENT = 1000  # take only patients with more records
-TRAIN_RECORDS_PER_PATIENT = 50  # how many records to take from each patient for training
+TRAIN_RECORDS_PER_PATIENT = 3  # how many records to take from each patient for training
 NUM_PATIENTS = 5
 ALL_PATIENTS = True
+TRAIN_SEED = 5
+TEST_SEED = 10
 HIGH_THRESH = 100
 LOW_THRESH = 70
 WINDOWS_PER_LABEL = 8000
@@ -41,6 +48,12 @@ FREQUENCY_END = 12
 FREQUENCY_START = 0
 STFT_WIN_SIZE = 750
 NUM_PER_SHARD = 20000
+WORK_MODE = Mode.compare_results
+
+if TRAIN_MODELS:
+    SEED = TRAIN_SEED
+else:
+    SEED = TEST_SEED
 
 # datetime object containing current date and time
 now = datetime.now()
@@ -77,18 +90,25 @@ DATASET_DIR = f'{BASE_DIR}/NN_Data'
 NN_MODELS = f'{BASE_DIR}/nn_models'
 DIAS_BP_MODEL_DIR = f'{NN_MODELS}/{TIME_DIR}/Dias'
 SYS_BP_MODEL_DIR = f'{NN_MODELS}/{TIME_DIR}/Sys'
+LOAD_DIAS_BP_MODEL_DIR = f'{NN_MODELS}/Experiments/10_11_2022_17_52_06/Dias'
+LOAD_SYS_BP_MODEL_DIR = f'{NN_MODELS}//Sys'
+COMPARE_DIR = f'{BASE_DIR}/Results/CompareModels/{TIME}'
 
 CLASSIFY_DIRS = [CLASSIFY_PLATFORM_DIR, CLASSIFIED_PLOTS]
 TRAINING_DIRS = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR, SVM_DIR, LDA_DIR, QDA_DIR, MAH_DIR, MODELS_DIR, DATASET_DIR]
 NN_TRAIN_DIRS = [DIAS_BP_MODEL_DIR, SYS_BP_MODEL_DIR]
+COMPARE_DIRS = [COMPARE_DIR]
 
-if TRAIN_NN is True:
-    dir_list = NN_TRAIN_DIRS
-else:
-    if TRAIN_MODELS is True:
-        dir_list = TRAINING_DIRS
-    else:
-        dir_list = CLASSIFY_DIRS
+match WORK_MODE:
+    case Mode.save_valid_data:
+        dir_list = NN_TRAIN_DIRS
+    case Mode.train_sqi_models:
+        if TRAIN_MODELS is True:
+            dir_list = TRAINING_DIRS
+        else:
+            dir_list = CLASSIFY_DIRS
+    case Mode.compare_results:
+            dir_list = COMPARE_DIRS
 
 for output_dir in dir_list:
     if not os.path.exists(output_dir):

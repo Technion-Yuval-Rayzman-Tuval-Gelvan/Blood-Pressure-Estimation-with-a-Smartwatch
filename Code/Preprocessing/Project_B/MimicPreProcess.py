@@ -61,6 +61,7 @@ def save_good_records_list():
 
 def main():
     assert cfg.DATASET == cfg.Dataset.mimic and cfg.TRAIN_MODELS is True
+    assert cfg.WORK_MODE == cfg.Mode.train_sqi_models
 
     """save list of records"""
     # if cfg.MIN_RECORDS_PER_PATIENT > 0:
