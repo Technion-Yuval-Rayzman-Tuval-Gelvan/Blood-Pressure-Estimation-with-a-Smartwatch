@@ -20,12 +20,15 @@ class Mode(enum.Enum):
     train_sqi_models = 0
     save_valid_data = 1  # After training use models to classify and save valid data to NN module
     compare_results = 2
+    nn_training = 3
 
 
 # ------------------------------------------------
 #                   CONFIG
 # ------------------------------------------------
 DATASET = Dataset.mimic
+WORK_MODE = Mode.nn_training
+
 # DATASET = Dataset.cardiac
 PLOT = False
 MAX_PLOT_PER_LABEL = 10
@@ -39,7 +42,6 @@ HIGH_THRESH = 100
 LOW_THRESH = 70
 WINDOWS_PER_LABEL = 8000
 TRAIN_MODELS = False
-TRAIN_NN = True
 SIGNAL_TYPE = 'ppg'  # ppg or bp
 EXP_DIR = f'{SIGNAL_TYPE}_thresh_{HIGH_THRESH}_{LOW_THRESH}'
 TRUE_PPG_SCORE = 2 # Mah + LDA + QDA + SVM ( score can be - [-4, -2, 0, 2, 4])
@@ -48,7 +50,6 @@ FREQUENCY_END = 12
 FREQUENCY_START = 0
 STFT_WIN_SIZE = 750
 NUM_PER_SHARD = 20000
-WORK_MODE = Mode.compare_results
 
 if TRAIN_MODELS:
     SEED = TRAIN_SEED
@@ -95,13 +96,14 @@ LOAD_SYS_BP_MODEL_DIR = f'{NN_MODELS}//Sys'
 COMPARE_DIR = f'{BASE_DIR}/Results/CompareModels/{TIME}'
 
 CLASSIFY_DIRS = [CLASSIFY_PLATFORM_DIR, CLASSIFIED_PLOTS]
-TRAINING_DIRS = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR, SVM_DIR, LDA_DIR, QDA_DIR, MAH_DIR, MODELS_DIR, DATASET_DIR]
+TRAINING_DIRS = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR, SVM_DIR, LDA_DIR, QDA_DIR, MAH_DIR, MODELS_DIR]
+SAVE_DATA_DIRS = [DATASET_DIR]
 NN_TRAIN_DIRS = [DIAS_BP_MODEL_DIR, SYS_BP_MODEL_DIR]
 COMPARE_DIRS = [COMPARE_DIR]
 
 match WORK_MODE:
     case Mode.save_valid_data:
-        dir_list = NN_TRAIN_DIRS
+        dir_list = SAVE_DATA_DIRS
     case Mode.train_sqi_models:
         if TRAIN_MODELS is True:
             dir_list = TRAINING_DIRS
@@ -109,6 +111,8 @@ match WORK_MODE:
             dir_list = CLASSIFY_DIRS
     case Mode.compare_results:
             dir_list = COMPARE_DIRS
+    case Mode.nn_training:
+            dir_list = NN_TRAIN_DIRS
 
 for output_dir in dir_list:
     if not os.path.exists(output_dir):

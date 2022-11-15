@@ -125,8 +125,6 @@ def main():
     # win_list = utils.load_list()
     # clf.test_platform(win_list)
 
-    """ Classify Dataset """
-
 
 if __name__ == "__main__":
     cfg.CLASSIFICATION_LOG.redirect_output()

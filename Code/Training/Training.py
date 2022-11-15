@@ -210,9 +210,10 @@ def fine_tuning(model, train_loader, val_loader, model_name, save_file_name):
     plt.savefig(f'../../Results/fine_tuning_{now}_{model_name}.png')
 
 
-def train_model(model, train_loader, val_loader, model_name, save_file_name):
+def train_model(model, train_loader, val_loader, model_name, save_file_name, plot=True):
     learning_rate = 0.005
-    n_epochs = 200
+    # n_epochs = 200
+    n_epochs = 1
 
     train_objective_list, val_objective_list = train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, save_file_name)
 

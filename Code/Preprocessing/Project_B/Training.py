@@ -14,26 +14,28 @@ from datetime import datetime
 import sys, os
 import Config as cfg
 from Code.Training import ResNet, HDF5DataLoader
-from Code.Training.Training import get_device, train_model, plot_results, load_data, fine_tuning
+from Code.Training.Training import get_device, train_model, plot_results, load_data, fine_tuning, calculate_test_score
 
 
 def main():
+    assert cfg.WORK_MODE == cfg.Mode.nn_training
+
     """Paths"""
     data_path = cfg.DATASET_DIR
     model_path = cfg.NN_MODELS
     device = get_device()
 
-    print("****** Fine Tuning Dias Model ******")
-    model = ResNet.create_resnet_model().to(device)
-    model_name = 'dias_model'
-    save_file_name = f'{cfg.DIAS_BP_MODEL_DIR}/fine_tuning_{model_name}.pt'
-    if os.path.exists(save_file_name):
-        # Load the best state dict
-        model.load_state_dict(torch.load(save_file_name))
-
-    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', 6)
-    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', 2)
-    fine_tuning(model, train_loader, val_loader, model_name, save_file_name)
+    # print("****** Fine Tuning Dias Model ******")
+    # model = ResNet.create_resnet_model().to(device)
+    # model_name = 'dias_model'
+    # save_file_name = f'{cfg.DIAS_BP_MODEL_DIR}/fine_tuning_{model_name}.pt'
+    # if os.path.exists(save_file_name):
+    #     # Load the best state dict
+    #     model.load_state_dict(torch.load(save_file_name))
+    #
+    # train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', 6)
+    # val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', 2)
+    # fine_tuning(model, train_loader, val_loader, model_name, save_file_name)
 
     print("****** Train Dias Model ******")
     model = ResNet.create_resnet_model().to(device)
@@ -45,9 +47,9 @@ def main():
         print("Load model:", dias_model_path)
         model.load_state_dict(torch.load(model_path))
 
-    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
-    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
-    train_model(model, train_loader, val_loader, model_name, dias_save_file_name)
+    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', max_chuncks=2)
+    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', max_chuncks=1)
+    train_model(model, train_loader, val_loader, model_name, dias_save_file_name, plot=False)
 
     # print("****** Train Sys Model ******")
     # model = ResNet.create_resnet_model().to(device)
@@ -60,7 +62,7 @@ def main():
     #
     # train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
     # val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
-    # train_model(model, train_loader, val_loader, model_name, sys_save_file_name)
+    # train_model(model, train_loader, val_loader, model_name, sys_save_file_name, plot=False)
 
     # print("****** Check Test Score *******")
     # """Load Dias Model"""

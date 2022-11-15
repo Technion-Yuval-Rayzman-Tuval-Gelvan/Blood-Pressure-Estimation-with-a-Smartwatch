@@ -50,7 +50,12 @@ def save_win(win, win_name):
 
 
 def save_list(list):
-    with open(f"{cfg.DATA_DIR}/windows_list", 'wb') as file:
+    if cfg.WORK_MODE == cfg.Mode.compare_results:
+        save_dir = cfg.COMPARE_DIR
+    else:
+        save_dir = cfg.DATA_DIR
+
+    with open(f"{save_dir}/windows_list", 'wb') as file:
         pickle.dump(list, file)
 
 
