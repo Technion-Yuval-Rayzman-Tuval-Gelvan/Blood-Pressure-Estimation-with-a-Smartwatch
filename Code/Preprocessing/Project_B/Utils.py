@@ -60,7 +60,12 @@ def save_list(list):
 
 
 def load_list():
-    with open(f"{cfg.DATA_DIR}/windows_list", 'rb') as file:
+    if cfg.WORK_MODE == cfg.Mode.compare_results:
+        save_dir = cfg.COMPARE_DIR
+    else:
+        save_dir = cfg.DATA_DIR
+
+    with open(f"{save_dir}/windows_list", 'rb') as file:
         win_list = pickle.load(file)
     return win_list
 

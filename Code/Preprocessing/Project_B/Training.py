@@ -47,22 +47,22 @@ def main():
         print("Load model:", dias_model_path)
         model.load_state_dict(torch.load(model_path))
 
-    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', max_chuncks=2)
-    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', max_chuncks=1)
-    train_model(model, train_loader, val_loader, model_name, dias_save_file_name, plot=False)
+    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
+    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
+    train_model(model, train_loader, val_loader, model_name, dias_save_file_name)
 
-    # print("****** Train Sys Model ******")
-    # model = ResNet.create_resnet_model().to(device)
-    # model_name = 'sys_model'
-    # sys_save_file_name = cfg.SYS_BP_MODEL_DIR
-    # sys_model_path = f"{dias_save_file_name}/resnet_model.pt"
-    # if os.path.exists(sys_model_path):
-    #     # Load the best state dict
-    #     model.load_state_dict(torch.load(sys_model_path))
-    #
-    # train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
-    # val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
-    # train_model(model, train_loader, val_loader, model_name, sys_save_file_name, plot=False)
+    print("****** Train Sys Model ******")
+    model = ResNet.create_resnet_model().to(device)
+    model_name = 'sys_model'
+    sys_save_file_name = cfg.SYS_BP_MODEL_DIR
+    sys_model_path = f"{dias_save_file_name}/resnet_model.pt"
+    if os.path.exists(sys_model_path):
+        # Load the best state dict
+        model.load_state_dict(torch.load(sys_model_path))
+
+    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
+    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
+    train_model(model, train_loader, val_loader, model_name, sys_save_file_name)
 
     # print("****** Check Test Score *******")
     # """Load Dias Model"""

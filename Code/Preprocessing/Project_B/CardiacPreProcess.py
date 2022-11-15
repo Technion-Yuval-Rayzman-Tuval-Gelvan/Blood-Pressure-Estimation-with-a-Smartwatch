@@ -60,15 +60,17 @@ def preprocess_data(data):
 
             win_ppg_sqi = utils.SQI()
             win_ppg_sqi.calculate_sqi(win_ppg_signal)
+            win_ppg_sqi_list = win_ppg_sqi.get_ski_list()
             win_bp_sqi = utils.SQI()
             win_bp_sqi.calculate_sqi(win_bp_signal)
+            win_bp_sqi_list = win_bp_sqi.get_ski_list()
 
             start_point += new_samples_per_step
             end_point += new_samples_per_step
             sys_bp, dias_bp = utils.bp_detection(win_bp_signal)
 
             new_win = utils.Window(win_ppg_signal, win_bp_signal, win_ppg_target,
-                                   win_bp_target, win_bp_sqi, win_ppg_sqi,
+                                   win_bp_target, win_bp_sqi_list, win_ppg_sqi_list,
                                    win_name = f'{name}_{win_num}', sys_bp=sys_bp, dias_bp=dias_bp)
             win_num += 1
 

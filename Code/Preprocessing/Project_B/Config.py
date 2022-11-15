@@ -26,10 +26,11 @@ class Mode(enum.Enum):
 # ------------------------------------------------
 #                   CONFIG
 # ------------------------------------------------
-DATASET = Dataset.mimic
-WORK_MODE = Mode.nn_training
+# DATASET = Dataset.mimic
+DATASET = Dataset.cardiac
+WORK_MODE = Mode.compare_results
 
-# DATASET = Dataset.cardiac
+
 PLOT = False
 MAX_PLOT_PER_LABEL = 10
 MIN_RECORDS_PER_PATIENT = 1000  # take only patients with more records
@@ -93,7 +94,13 @@ DIAS_BP_MODEL_DIR = f'{NN_MODELS}/{TIME_DIR}/Dias'
 SYS_BP_MODEL_DIR = f'{NN_MODELS}/{TIME_DIR}/Sys'
 LOAD_DIAS_BP_MODEL_DIR = f'{NN_MODELS}/Experiments/10_11_2022_17_52_06/Dias'
 LOAD_SYS_BP_MODEL_DIR = f'{NN_MODELS}//Sys'
-COMPARE_DIR = f'{BASE_DIR}/Results/CompareModels/{TIME}'
+COMPARE_DIR_MIMIC = f'{BASE_DIR}/Results/CompareModels/mimic/{TIME}'
+COMPARE_DIR_CARDIAC = f'{BASE_DIR}/Results/CompareModels/cardiac/{TIME}'
+
+if DATASET == Dataset.mimic:
+    COMPARE_DIR = COMPARE_DIR_MIMIC
+else:
+    COMPARE_DIR = COMPARE_DIR_CARDIAC
 
 CLASSIFY_DIRS = [CLASSIFY_PLATFORM_DIR, CLASSIFIED_PLOTS]
 TRAINING_DIRS = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR, SVM_DIR, LDA_DIR, QDA_DIR, MAH_DIR, MODELS_DIR]

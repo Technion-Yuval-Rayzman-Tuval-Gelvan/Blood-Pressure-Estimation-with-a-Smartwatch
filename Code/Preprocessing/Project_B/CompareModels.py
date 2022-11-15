@@ -42,30 +42,66 @@ class CompareWin:
         if bp_valid:
             self.bp_our_model_target = utils.Label.good
         else:
-            self.bp_our_model_target = utils.Label.good
+            self.bp_our_model_target = utils.Label.bad
 
-
-
-
-def get_our_model_classification(signal, is_ppg=True):
-    hp_target_list = []
-
-    for win in win_list:
-        if is_ppg:
-            signal = win.ppg_signal
+        if ppg_valid:
+            self.ppg_our_model_target = utils.Label.good
         else:
-            signal = win.bp_signal
+            self.ppg_our_model_target = utils.Label.bad
 
-        target = classify_target(signal, cfg.FREQUENCY)
+
+def save_compare_plots(target_1, target_2, target_1_name, target_2_name, win, is_ppg=True, plot_results=True):
+
+    if is_ppg:
+        signal = win.ppg_signal
+    else:
+        signal = win.bp_signal
+
+    # good 1 - bad 2
+    if target_1 == utils.Label.good and target_2 == utils.Label.bad:
+        if plot_results:
+            utils.plot_win(signal, f'good_{target_1_name}_bad_{target_2_name}/{win.win_name}')
+
+    # bad 1 - good 2
+    if target_1 == utils.Label.bad and target_2 == utils.Label.good:
+        if plot_results:
+            utils.plot_win(signal, f'bad_{target_1_name}_good_{target_2_name}/{win.win_name}')
+
+    # good 1 - good 2
+    if target_1 == utils.Label.good and target_2 == utils.Label.good:
+        if plot_results:
+            utils.plot_win(signal, f'good_{target_1_name}_good_{target_2_name}/{win.win_name}')
+
+    # bad 1 - bad 2
+    if target_1 == utils.Label.bad and target_2 == utils.Label.bad:
+        if plot_results:
+            utils.plot_win(signal, f'bad_{target_1_name}_bad_{target_2_name}/{win.win_name}')
 
 
 def compare_accuracy_to_cardiac(win_list):
-    compare_win_list = []
     clf = ClassifyPlatform()
     clf.load_models()
 
-    for win in win_list:
-        new_win = CompareWin(win, clf)
+    for win in tqdm(win_list):
+        """ Get all targets """
+        new_win = CompareWin(win)
+
+        new_win.get_our_model_classification(clf)
+
+        """ Compare Results"""
+        save_compare_plots(new_win.ppg_cardiac_target, new_win.ppg_our_model_target, "cardiac", "our",
+                           new_win.win, is_ppg=True)
+        save_compare_plots(new_win.ppg_cardiac_target, new_win.ppg_heartpy_target, "cardiac", "heartpy",
+                           new_win.win, is_ppg=True)
+        save_compare_plots(new_win.ppg_our_model_target, new_win.ppg_heartpy_target, "our", "heartpy",
+                           new_win.win, is_ppg=True)
+        save_compare_plots(new_win.bp_cardiac_target, new_win.bp_our_model_target, "cardiac", "our",
+                           new_win.win, is_ppg=False)
+        save_compare_plots(new_win.bp_cardiac_target, new_win.bp_heartpy_target, "cardiac", "heartpy",
+                           new_win.win, is_ppg=False)
+        save_compare_plots(new_win.bp_our_model_target, new_win.bp_heartpy_target, "our", "heartpy",
+                           new_win.win, is_ppg=False)
+
 
 def main():
     assert cfg.WORK_MODE == cfg.Mode.compare_results
@@ -79,11 +115,7 @@ def main():
     assert cfg.DATASET == cfg.Dataset.cardiac
     data = load_files()
     win_list = preprocess_data(data)
-    utils.save_list(win_list)
-    win_list = utils.load_list()
-
-
-
+    compare_accuracy_to_cardiac(win_list)
 
 
 if __name__ == "__main__":
