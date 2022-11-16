@@ -1,7 +1,6 @@
 import copy
 import pickle
 import warnings
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -64,29 +63,6 @@ def main():
     val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
     train_model(model, train_loader, val_loader, model_name, sys_save_file_name)
 
-    # print("****** Check Test Score *******")
-    # """Load Dias Model"""
-    # model = ResNet.create_resnet_model().to(device)
-    # model_name = 'dias_model'
-    # if os.path.exists(dias_save_file_name):
-    #     # Load the best state dict
-    #     print(f"Load Model: {dias_save_file_name}")
-    #     model.load_state_dict(torch.load(dias_save_file_name))
-    #
-    # test_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Test')
-    # calculate_test_score(model, test_loader, model_name)
-    #
-    # """Load Sys Model"""
-    # model = ResNet.create_resnet_model().to(device)
-    # model_name = 'sys_model'
-    # if os.path.exists(sys_save_file_name):
-    #     # Load the best state dict
-    #     print(f"Load Model: {sys_save_file_name}")
-    #     model.load_state_dict(torch.load(sys_save_file_name))
-    #
-    # test_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Test')
-    # calculate_test_score(model, test_loader, model_name)
-
     print(""" Print Results""")
     model_name = 'dias_model'
     dias_model_load_dir = f'{cfg.LOAD_DIAS_BP_MODEL_DIR}'
@@ -97,12 +73,12 @@ def main():
         print(len(train_objective_list))
         plot_results(train_objective_list[:100], val_objective_list[:100], model_name, dias_model_load_dir)
 
-    # model_name = 'sys_model'
-    # lists_path = f"{sys_save_file_name}/{model_name}_objective_lists"
-    # if os.path.exists(lists_path):
-    #     print("Load lists:", lists_path)
-    #     val_objective_list, train_objective_list = load_data(lists_path)
-    # plot_results(train_objective_list[:100], val_objective_list[:100], model_name)
+    model_name = 'sys_model'
+    lists_path = f"{sys_save_file_name}/{model_name}_objective_lists"
+    if os.path.exists(lists_path):
+        print("Load lists:", lists_path)
+        val_objective_list, train_objective_list = load_data(lists_path)
+    plot_results(train_objective_list[:100], val_objective_list[:100], model_name)
 
 
 if __name__ == "__main__":

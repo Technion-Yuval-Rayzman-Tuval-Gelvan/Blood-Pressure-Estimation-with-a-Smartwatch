@@ -25,7 +25,7 @@ sys.path.append(os.path.abspath(os.path.join('..', 'HDF5DataLoader')))
 plt.rcParams['figure.figsize'] = (8.0, 8.0)  # Set default plot's sizes
 plt.rcParams['axes.grid'] = True  # Show grid by default in figures
 print_every = 1
-max_epochs_stop = 2
+max_epochs_stop = 5
 HDF5 = True
 
 
@@ -156,7 +156,7 @@ def train(model, learning_rate, n_epochs, train_loader, val_loader, model_name, 
                 if np.min(valid_loss) < valid_loss_min:
                     # Save model
                     print(f"Save better model. last valid loss: {valid_loss_min}. new valid loss: {np.min(valid_loss)}")
-                    torch.save(model.state_dict(), f'{save_file_name}/model_min_loss_{np.min(valid_loss)}')
+                    torch.save(model.state_dict(), f'{save_file_name}/{model_name}')
                     save_data((val_objective_list, train_objective_list), lists_path)
                     # Track improvement
                     epochs_no_improve = 0

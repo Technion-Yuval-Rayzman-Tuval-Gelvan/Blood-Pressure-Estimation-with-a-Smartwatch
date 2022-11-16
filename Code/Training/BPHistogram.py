@@ -7,6 +7,7 @@ import torchvision
 import tqdm
 import os
 import sys
+import Code.Preprocessing.Project_B.Config as cfg
 from torchvision import datasets, models, transforms
 from datetime import datetime
 # Set some default values of the the matplotlib plots
@@ -55,30 +56,53 @@ def calculate_histogram(bp_list, bp_name):
     plt.title(f'{bp_name} Blood Pressure Histogram')
     # dd/mm/YY H:M:S
     now = datetime.now()
-    plt.savefig(f'../../Results/Histogram/Histogram_{now}_{bp_name}_Blood_Pressure.png')
+
+    if cfg.WORK_MODE == cfg.Mode.project_a:
+        save_dir = '../../Results/Histogram'
+
+    plt.savefig(f'{cfg.NN_RESULTS_DIR}/Histogram_{bp_name}_Blood_Pressure.png')
     plt.show()
 
 
 def main():
+    """Project A"""
     # data_path = '../../Test_Data'
-    data_path = '../../Data'
+    # data_path = '../../Data'
+
+    """Project B"""
+    data_path = cfg.DATASET_DIR
+    assert cfg.WORK_MODE == cfg.Mode.compare_results and cfg.CREATE_DIRS
+
     # dir_list = LoadData.get_dir_list(data_path)
     # dias_bp_list, sys_bp_list = load_bp_data(data_path, dir_list)
     # calculate_histogram(dias_bp_list, "Diastolic")
     # calculate_histogram(sys_bp_list, "Systolic")
-    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'dias_model', 'Train', max_chuncks=8)
+
+    """Dias Histogram"""
+    # train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'dias_model', 'Train', max_chuncks=8)
+    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'dias_model', 'Train')
     train_dias_bp_list = load_bp_data_loader(train_loader)
     calculate_histogram(train_dias_bp_list, "Train Diastolic")
-    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'dias_model', 'Validation', max_chuncks=2)
+    # val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'dias_model', 'Validation', max_chuncks=2)
+    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'dias_model', 'Validation')
     valid_dias_bp_list = load_bp_data_loader(val_loader)
     calculate_histogram(valid_dias_bp_list, "Valid Diastolic")
+    test_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'dias_model', 'Test')
+    test_dias_bp_list = load_bp_data_loader(test_loader)
+    calculate_histogram(test_dias_bp_list, "Test Diastolic")
 
-    train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'sys_model', 'Train', max_chuncks=8)
-    train_sys_bp_list = load_bp_data_loader(train_loader)
-    calculate_histogram(train_sys_bp_list, "Train Systolic")
-    val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'sys_model', 'Validation', max_chuncks=2)
-    valid_sys_bp_list = load_bp_data_loader(val_loader)
-    calculate_histogram(valid_sys_bp_list, "Valid Systolic")
+    """Sys Histogram"""
+    # # train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'sys_model', 'Train', max_chuncks=8)
+    # train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'sys_model', 'Train')
+    # train_sys_bp_list = load_bp_data_loader(train_loader)
+    # calculate_histogram(train_sys_bp_list, "Train Systolic")
+    # # val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'sys_model', 'Validation', max_chuncks=2)
+    # val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'sys_model', 'Validation')
+    # valid_sys_bp_list = load_bp_data_loader(val_loader)
+    # calculate_histogram(valid_sys_bp_list, "Valid Systolic")
+    # test_loader = HDF5DataLoader.get_hdf5_dataset(data_path, 'sys_model', 'Test')
+    # test_sys_bp_list = load_bp_data_loader(test_loader)
+    # calculate_histogram(test_sys_bp_list, "Test Systolic")
 
 
 if __name__ == "__main__":
