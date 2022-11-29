@@ -33,6 +33,23 @@ class Window:
         self.dias_bp = dias_bp
 
 
+def filter_bp_bounds(y, y_pred, model_name):
+    assert len(y) == len(y_pred)
+    new_y = new_y_pred = []
+
+    for i in range(len(y)):
+        if model_name == 'dias_model':
+            if y[i] > 85 or y[i] < 40 or y_pred[i] > 85 or y_pred[i] < 40:
+                continue
+        if model_name == 'sys_model':
+            if y[i] > 150 or y[i] < 100 or y_pred[i] > 150 or y_pred[i] < 100:
+                continue
+        new_y.append(y[i])
+        new_y_pred.append(y_pred[i])
+
+    return new_y, new_y_pred
+
+
 def save_model(model, model_name):
     with open(f"{cfg.MODELS_DIR}/{model_name}.pkl", 'wb') as file:
         pickle.dump(model, file)
@@ -50,7 +67,7 @@ def save_win(win, win_name):
 
 
 def save_list(list):
-    if cfg.WORK_MODE == cfg.Mode.compare_results:
+    if cfg.WORK_MODE == cfg.Mode.compare_models:
         save_dir = cfg.COMPARE_DIR
     else:
         save_dir = cfg.DATA_DIR
@@ -60,7 +77,7 @@ def save_list(list):
 
 
 def load_list():
-    if cfg.WORK_MODE == cfg.Mode.compare_results:
+    if cfg.WORK_MODE == cfg.Mode.compare_models:
         save_dir = cfg.COMPARE_DIR
     else:
         save_dir = cfg.DATA_DIR
@@ -127,12 +144,13 @@ def plot_win(win, name):
         print(f"Bad record: {name}")
         return
 
-    save_dir = cfg.COMPARE_DIR if cfg.WORK_MODE == cfg.Mode.compare_results else cfg.PLOT_DIR
+    save_dir = cfg.COMPARE_DIR if cfg.WORK_MODE == cfg.Mode.compare_models else cfg.PLOT_DIR
 
     if not os.path.exists(os.path.dirname(f"{save_dir}/{name}.png")):
         os.makedirs(os.path.dirname(f"{save_dir}/{name}.png"))
 
     plt.savefig(f"{save_dir}/{name}.png")
+    plt.close()
 
 
 def plot_signal(signal, name, is_ppg):

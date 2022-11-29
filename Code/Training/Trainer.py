@@ -11,10 +11,10 @@ import torch.autograd as autograd
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
 sys.path.append('../../Code/Training')
-import ResNet
+import Code.Training.ResNet
 from typing import Any, Tuple, Callable, Optional, cast
 sys.path.append('../../Code/Training/TrainResult.py')
-from TrainResult import FitResult, EpochResult, BatchResult
+from Code.Training.TrainResult import FitResult, EpochResult, BatchResult
 
 
 class Trainer(abc.ABC):

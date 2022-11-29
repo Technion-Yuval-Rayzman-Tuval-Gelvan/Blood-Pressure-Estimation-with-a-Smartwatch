@@ -11,6 +11,7 @@ import numpy as np
 # from Code.Training import HDF5DataLoader
 # from Code.Training.BPHistogram import calculate_histogram
 # from Code.Training.Trainer import Trainer
+from Code.Preprocessing.Project_B.Utils import filter_bp_bounds
 
 
 def plot_confusion(all_categories, confusion, directory='../../Results', model_name='dias_model'):
@@ -46,24 +47,23 @@ def plot_confusion(all_categories, confusion, directory='../../Results', model_n
     ax.yaxis.set_major_locator(majorLocator)
     ax.yaxis.set_minor_locator(minorLocator)
 
-    plt.show()
-    save_path = f"{directory}/confusion_matrix"
-    print("Save confusion matrix at:", save_path)
-    plt.savefig(f"{save_path}/Confusion_Matrix_{model_name}.png")
+    # plt.show()
+    print("Save confusion matrix at:", directory)
+    plt.savefig(f"{directory}/Confusion_Matrix_{model_name}.png")
 
 
 def confusion_matrix(epoch_result, save_dir='../../Results', model_name='dias_model'):
 
-    y_pred = np.array(epoch_result.pred_labels)
-    y = np.array(epoch_result.target_labels)
-    print(y_pred, y)
-    all_categories = list(range(20, 111, 1))
+    y_pred = epoch_result.pred_labels
+    y = epoch_result.target_labels
+    new_y, new_y_pred = filter_bp_bounds(y, y_pred, model_name)
+    if model_name == 'dias_model':
+        all_categories = list(range(40, 86, 1))
+    else:
+        all_categories = list(range(100, 151, 1))
     confusion = torch.zeros(len(all_categories), len(all_categories))
-    for k in range(len(y)):
-        if y_pred[k] < 20 or y[k] < 20 or y_pred[k] > 110 or y[k] > 110:
-            continue
-
-        confusion[all_categories.index(int(y[k]))][all_categories.index(int(y_pred[k]))] += 1
+    for k in range(len(new_y)):
+        confusion[all_categories.index(int(new_y[k]))][all_categories.index(int(new_y_pred[k]))] += 1
     plot_confusion(all_categories, confusion, save_dir, model_name=model_name)
 
 

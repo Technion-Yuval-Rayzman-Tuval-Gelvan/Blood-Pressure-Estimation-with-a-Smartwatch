@@ -126,7 +126,7 @@ class DatasetCreator:
                             if bp_platform_valid and ppg_platform_valid and new_win.ppg_target == utils.Label.good:
                                 # save spectogram of the valid window
                                 window_to_spectogram(new_win)
-                    case cfg.Mode.compare_results:
+                    case cfg.Mode.compare_models:
                         if num_win < 10:
                             # Classify window with the trained models
                             bp_platform_valid, ppg_platform_valid = self.classify_platform.valid_win(new_win)

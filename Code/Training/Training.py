@@ -14,6 +14,7 @@ from torchvision import datasets, models, transforms
 from datetime import datetime
 import sys, os
 
+from Code.Preprocessing.Project_B.Utils import filter_bp_bounds
 from Code.Training import ResNet, HDF5DataLoader
 
 sys.path.append(os.path.abspath(os.path.join('..', 'LoadData')))
@@ -211,7 +212,7 @@ def fine_tuning(model, train_loader, val_loader, model_name, save_file_name):
 
 
 def train_model(model, train_loader, val_loader, model_name, save_file_name):
-    learning_rate = 0.005
+    learning_rate = 0.0005
     # n_epochs = 200
     n_epochs = 20
 
@@ -255,6 +256,9 @@ def calculate_test_score(model, test_loader, model_name):
                 x, y = Variable(x), Variable(y)
 
             y_hat = np.squeeze(model(x))
+            y, y_hat = filter_bp_bounds(y, y_hat, model_name)
+            y = torch.tensor(y)
+            y_hat = torch.tensor(y_hat)
             error = ((y_hat - y).abs()).sum().cpu()
             errors.append(error)
 

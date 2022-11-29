@@ -97,35 +97,46 @@ def compare_accuracy_to_cardiac(win_list):
                            new_win.win, is_ppg=False)
 
 
-def calculate_histogram(cardiac_labels, heartpy_lables, our_labels):
-    classifications_hist = {'good, good, good': 0, 'good, good, bad': 0, 'good, bad, good': 0,
-                            'bad, good, good': 0, 'good, bad, bad': 0, 'bad, bad, good': 0,
-                            'bad, good, bad': 0, 'bad, bad, bad': 0}
+def calculate_histogram(win_hist, name):
 
-    # [[Good, Good, Bad], [Bad, Bad, Bad], ...]
-    for i in range(len(cardiac_labels)):
-        classifications_hist[f'{cardiac_labels[i].name}, {heartpy_lables[i].name}, {our_labels[i].name}'] += 1
+    hist_list = {}
+    for key in win_hist.keys():
+        win_list = win_hist[key]
+        key_list = key.split(", ")
+        hist_key = f"{key_list[0][0]}, {key_list[1][0]}, {key_list[2][0]}"
+        hist_list[hist_key] = len(win_list)
 
-    print(classifications_hist)
-    hist_list = [key for key, val in classifications_hist.items() for _ in range(val)]
-    n, bins, patches = plt.hist(x=hist_list, bins='auto', alpha=0.7, rwidth=0.85)
-    plt.grid(axis='y', alpha=0.75)
+        print(f"{hist_key}: {len(win_list)}")
+
+        for compare_win in win_list:
+            if cfg.PLOT:
+                if name == 'ppg':
+                    signal = compare_win.win.ppg_signal
+                else:
+                    signal = compare_win.win.bp_signal
+
+                name_list = key.split(", ")
+                utils.plot_win(signal, f'cardiac_{name_list[0]}_heartpy_{name_list[1]}_ours_{name_list[2]}/{compare_win.win.win_name}')
+
+    plt.bar(x=list(hist_list.keys()), height=list(hist_list.values()))
+    plt.grid(axis='y')
     plt.xlabel('Cardiac Label, Heartpy Label, Our Label')
     plt.ylabel('# windows')
     # plt.show()
-    plt.savefig(f'{cfg.COMPARE_DIR}/Histogram_Models_Classification.png')
+    plt.savefig(f'{cfg.COMPARE_DIR}/Histogram_Models_{name}_Classification.png')
+    plt.close()
 
 
 def plot_histogram_results(win_list):
     clf = ClassifyPlatform()
     clf.load_models()
-    heartpy_ppg_labels = []
-    cardiac_ppg_labels = []
-    our_ppg_labels = []
-    heartpy_bp_labels = []
-    cardiac_bp_labels = []
-    our_bp_labels = []
     none_counter = 0
+    ppg_win_hist = {'good, good, good': [], 'good, good, bad': [], 'good, bad, good': [],
+                            'bad, good, good': [], 'good, bad, bad': [], 'bad, bad, good': [],
+                            'bad, good, bad': [], 'bad, bad, bad': []}
+    bp_win_hist = {'good, good, good': [], 'good, good, bad': [], 'good, bad, good': [],
+                    'bad, good, good': [], 'good, bad, bad': [], 'bad, bad, good': [],
+                    'bad, good, bad': [], 'bad, bad, bad': []}
 
     for win in tqdm(win_list):
         """ Get all targets """
@@ -142,29 +153,24 @@ def plot_histogram_results(win_list):
             continue
 
         # Classify Mid as Bad windows
-        new_win.ppg_heartpy_target = utils.Label.bad if utils.Label.mid else new_win.ppg_heartpy_target
-        new_win.bp_heartpy_target = utils.Label.bad if utils.Label.mid else new_win.bp_heartpy_target
-        new_win.bp_cardiac_target = utils.Label.bad if utils.Label.mid else new_win.bp_cardiac_target
-        new_win.ppg_cardiac_target = utils.Label.bad if utils.Label.mid else new_win.ppg_cardiac_target
-        new_win.ppg_our_model_target = utils.Label.bad if utils.Label.mid else new_win.ppg_our_model_target
-        new_win.bp_our_model_target = utils.Label.bad if utils.Label.mid else new_win.bp_our_model_target
+        new_win.ppg_heartpy_target = utils.Label.bad if new_win.ppg_heartpy_target == utils.Label.mid else new_win.ppg_heartpy_target
+        new_win.bp_heartpy_target = utils.Label.bad if new_win.bp_heartpy_target == utils.Label.mid else new_win.bp_heartpy_target
+        new_win.bp_cardiac_target = utils.Label.bad if new_win.bp_cardiac_target == utils.Label.mid else new_win.bp_cardiac_target
+        new_win.ppg_cardiac_target = utils.Label.bad if new_win.ppg_cardiac_target == utils.Label.mid else new_win.ppg_cardiac_target
+        new_win.ppg_our_model_target = utils.Label.bad if new_win.ppg_our_model_target == utils.Label.mid else new_win.ppg_our_model_target
+        new_win.bp_our_model_target = utils.Label.bad if new_win.bp_our_model_target == utils.Label.mid else new_win.bp_our_model_target
 
+        ppg_win_hist[f'{new_win.ppg_cardiac_target.name}, {new_win.ppg_heartpy_target.name}, {new_win.ppg_our_model_target.name}'].append(new_win)
+        bp_win_hist[f'{new_win.bp_cardiac_target.name}, {new_win.bp_heartpy_target.name}, {new_win.bp_our_model_target.name}'].append(new_win)
 
-        heartpy_ppg_labels.append(new_win.ppg_heartpy_target)
-        heartpy_bp_labels.append(new_win.bp_heartpy_target)
-        cardiac_ppg_labels.append(new_win.ppg_cardiac_target)
-        cardiac_bp_labels.append(new_win.bp_cardiac_target)
-        our_ppg_labels.append(new_win.ppg_our_model_target)
-        our_bp_labels.append(new_win.bp_our_model_target)
-
-    calculate_histogram(cardiac_ppg_labels, heartpy_ppg_labels, our_ppg_labels)
-    calculate_histogram(cardiac_bp_labels, heartpy_bp_labels, our_bp_labels)
+    calculate_histogram(ppg_win_hist, 'ppg')
+    calculate_histogram(bp_win_hist, 'bp')
 
     print(f"None labels: {none_counter}")
 
 
 def main():
-    assert cfg.WORK_MODE == cfg.Mode.compare_results
+    assert cfg.WORK_MODE == cfg.Mode.compare_models
 
     """ Compare our model to Heartpy on Mimic Dataset"""
     # assert cfg.DATASET == cfg.Dataset.mimic

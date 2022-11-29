@@ -19,7 +19,7 @@ class BPType(enum.Enum):
 class Mode(enum.Enum):
     train_sqi_models = 0
     save_valid_data = 1  # After training use models to classify and save valid data to NN module
-    compare_results = 2
+    compare_models = 2
     nn_training = 3
     nn_results = 4
     project_a = 5
@@ -28,9 +28,10 @@ class Mode(enum.Enum):
 # ------------------------------------------------
 #                   CONFIG
 # ------------------------------------------------
-# DATASET = Dataset.mimic
-DATASET = Dataset.cardiac
-WORK_MODE = Mode.compare_results
+DATASET = Dataset.mimic
+# DATASET = Dataset.cardiac
+WORK_MODE = Mode.nn_results
+# WORK_MODE = Mode.compare_models
 
 PLOT = False
 MAX_PLOT_PER_LABEL = 10
@@ -92,10 +93,11 @@ PPG_MODELS_LOAD_DIR = f'{BASE_DIR}/mimic_data/ppg_thresh_100_70/Final_results/Fi
 BP_MODELS_LOAD_DIR = f'{BASE_DIR}/mimic_data/bp_thresh_100_70/Final_results/Final_result_27_10_2022_15_21_19/models'
 DATASET_DIR = f'{BASE_DIR}/NN_Data'
 NN_MODELS = f'{BASE_DIR}/nn_models'
-DIAS_BP_MODEL_DIR = f'{NN_MODELS}/{TIME_DIR}/Dias'
-SYS_BP_MODEL_DIR = f'{NN_MODELS}/{TIME_DIR}/Sys'
-LOAD_DIAS_BP_MODEL_DIR = f'{NN_MODELS}/Experiments/15_11_2022_17_01_46/Dias'
-LOAD_SYS_BP_MODEL_DIR = f'{NN_MODELS}/Experiments/15_11_2022_17_01_46/Sys'
+# DIAS_BP_MODEL_DIR = f'{NN_MODELS}/Experiments/16_11_2022_21_26_45/Dias'
+# DIAS_BP_MODEL_DIR = f'{NN_MODELS}/{TIME_DIR}/Diad'
+# SYS_BP_MODEL_DIR = f'{NN_MODELS}/{TIME_DIR}/Sys'
+LOAD_DIAS_BP_MODEL_DIR = f'{NN_MODELS}/Experiments/16_11_2022_21_26_45/Dias'
+LOAD_SYS_BP_MODEL_DIR = f'{NN_MODELS}/Experiments/17_11_2022_17_03_28/Sys'
 COMPARE_DIR_MIMIC = f'{BASE_DIR}/Results/CompareModels/mimic/{TIME}'
 COMPARE_DIR_CARDIAC = f'{BASE_DIR}/Results/CompareModels/cardiac/{TIME}'
 NN_RESULTS_DIR = f'{BASE_DIR}/Results/NNResults/{TIME}'
@@ -108,7 +110,7 @@ else:
 CLASSIFY_DIRS = [CLASSIFY_PLATFORM_DIR, CLASSIFIED_PLOTS]
 TRAINING_DIRS = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR, SVM_DIR, LDA_DIR, QDA_DIR, MAH_DIR, MODELS_DIR]
 SAVE_DATA_DIRS = [DATASET_DIR]
-NN_TRAIN_DIRS = [DIAS_BP_MODEL_DIR, SYS_BP_MODEL_DIR]
+# NN_TRAIN_DIRS = [DIAS_BP_MODEL_DIR, SYS_BP_MODEL_DIR]
 COMPARE_DIRS = [COMPARE_DIR]
 NN_RESULTS_DIRS = [NN_RESULTS_DIR]
 
@@ -120,7 +122,7 @@ match WORK_MODE:
             dir_list = TRAINING_DIRS
         else:
             dir_list = CLASSIFY_DIRS
-    case Mode.compare_results:
+    case Mode.compare_models:
             dir_list = COMPARE_DIRS
     case Mode.nn_training:
             dir_list = NN_TRAIN_DIRS

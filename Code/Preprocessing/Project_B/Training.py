@@ -39,12 +39,12 @@ def main():
     print("****** Train Dias Model ******")
     model = ResNet.create_resnet_model().to(device)
     model_name = 'dias_model'
-    dias_save_file_name = cfg.DIAS_BP_MODEL_DIR
-    dias_model_path = f"{dias_save_file_name}/resnet_model.pt"
+    dias_save_file_name = cfg.LOAD_DIAS_BP_MODEL_DIR
+    dias_model_path = f"{dias_save_file_name}/dias_model"
     if os.path.exists(dias_model_path):
         # Load the best state dict
         print("Load model:", dias_model_path)
-        model.load_state_dict(torch.load(model_path))
+        model.load_state_dict(torch.load(dias_model_path))
 
     train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
     val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
@@ -53,8 +53,8 @@ def main():
     print("****** Train Sys Model ******")
     model = ResNet.create_resnet_model().to(device)
     model_name = 'sys_model'
-    sys_save_file_name = cfg.SYS_BP_MODEL_DIR
-    sys_model_path = f"{dias_save_file_name}/resnet_model.pt"
+    sys_save_file_name = cfg.LOAD_SYS_BP_MODEL_DIR
+    sys_model_path = f"{dias_save_file_name}/sys_model"
     if os.path.exists(sys_model_path):
         # Load the best state dict
         model.load_state_dict(torch.load(sys_model_path))
@@ -62,23 +62,23 @@ def main():
     train_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train')
     val_loader = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation')
     train_model(model, train_loader, val_loader, model_name, sys_save_file_name)
-
-    print(""" Print Results""")
-    model_name = 'dias_model'
-    dias_model_load_dir = f'{cfg.LOAD_DIAS_BP_MODEL_DIR}'
-    lists_path = f"{dias_model_load_dir}/{model_name}_objective_lists"
-    if os.path.exists(lists_path):
-        print("Load lists:", lists_path)
-        val_objective_list, train_objective_list = load_data(lists_path)
-        print(len(train_objective_list))
-        plot_results(train_objective_list[:100], val_objective_list[:100], model_name, dias_model_load_dir)
-
-    model_name = 'sys_model'
-    lists_path = f"{sys_save_file_name}/{model_name}_objective_lists"
-    if os.path.exists(lists_path):
-        print("Load lists:", lists_path)
-        val_objective_list, train_objective_list = load_data(lists_path)
-    plot_results(train_objective_list[:100], val_objective_list[:100], model_name)
+    #
+    # print(""" Print Results""")
+    # model_name = 'dias_model'
+    # dias_model_load_dir = f'{cfg.LOAD_DIAS_BP_MODEL_DIR}'
+    # lists_path = f"{dias_model_load_dir}/{model_name}_objective_lists"
+    # if os.path.exists(lists_path):
+    #     print("Load lists:", lists_path)
+    #     val_objective_list, train_objective_list = load_data(lists_path)
+    #     print(len(train_objective_list))
+    #     plot_results(train_objective_list[:100], val_objective_list[:100], model_name, dias_model_load_dir)
+    #
+    # model_name = 'sys_model'
+    # lists_path = f"{sys_save_file_name}/{model_name}_objective_lists"
+    # if os.path.exists(lists_path):
+    #     print("Load lists:", lists_path)
+    #     val_objective_list, train_objective_list = load_data(lists_path)
+    # plot_results(train_objective_list[:100], val_objective_list[:100], model_name)
 
 
 if __name__ == "__main__":
