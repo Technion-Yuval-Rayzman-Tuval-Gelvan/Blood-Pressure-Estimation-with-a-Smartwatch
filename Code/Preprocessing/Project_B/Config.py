@@ -30,7 +30,7 @@ class Mode(enum.Enum):
 # ------------------------------------------------
 DATASET = Dataset.mimic
 # DATASET = Dataset.cardiac
-WORK_MODE = Mode.nn_results
+WORK_MODE = Mode.nn_training
 # WORK_MODE = Mode.compare_models
 
 PLOT = False
@@ -92,7 +92,11 @@ MODELS_DIR = f'{DATA_DIR}/{TIME_DIR}/models'
 PPG_MODELS_LOAD_DIR = f'{BASE_DIR}/mimic_data/ppg_thresh_100_70/Final_results/Final_Results_26_10/models'
 BP_MODELS_LOAD_DIR = f'{BASE_DIR}/mimic_data/bp_thresh_100_70/Final_results/Final_result_27_10_2022_15_21_19/models'
 DATASET_DIR = f'{BASE_DIR}/NN_Data'
-NN_MODELS = f'{BASE_DIR}/nn_models'
+NN_MODELS = f'{BASE_DIR}/Models'
+RESNET_MODELS = f'{NN_MODELS}/ResNet_Models'
+DENSENET_MODELS = f'{NN_MODELS}/DenseNet_Models'
+RESNET_CHECKPOINTS = f'{NN_MODELS}/ResNet_Checkpoints'
+DENSENET_CHECKPOINTS = f'{NN_MODELS}/DenseNet_Checkpoints'
 # DIAS_BP_MODEL_DIR = f'{NN_MODELS}/Experiments/16_11_2022_21_26_45/Dias'
 # DIAS_BP_MODEL_DIR = f'{NN_MODELS}/{TIME_DIR}/Diad'
 # SYS_BP_MODEL_DIR = f'{NN_MODELS}/{TIME_DIR}/Sys'
@@ -111,6 +115,7 @@ CLASSIFY_DIRS = [CLASSIFY_PLATFORM_DIR, CLASSIFIED_PLOTS]
 TRAINING_DIRS = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR, SVM_DIR, LDA_DIR, QDA_DIR, MAH_DIR, MODELS_DIR]
 SAVE_DATA_DIRS = [DATASET_DIR]
 # NN_TRAIN_DIRS = [DIAS_BP_MODEL_DIR, SYS_BP_MODEL_DIR]
+NN_TRAIN_DIRS = [RESNET_MODELS, DENSENET_MODELS, RESNET_CHECKPOINTS, DENSENET_CHECKPOINTS]
 COMPARE_DIRS = [COMPARE_DIR]
 NN_RESULTS_DIRS = [NN_RESULTS_DIR]
 

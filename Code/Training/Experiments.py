@@ -6,9 +6,13 @@ import torch
 import numpy as np
 import tqdm.auto
 
+from Code.Preprocessing.Project_B import Config as cfg
+
 sys.path.append('../../Code/Training/Trainer.py')
 sys.path.append('../../Code/Training')
 sys.path.append('../../Code/Training/TrainResult.py')
+sys.path.append('../../Code/Preprocessing/Project_B/Config.py')
+
 # Now do your import
 import ResNet, LoadData, HDF5DataLoader, DenseNet, PlotConfusion
 from TrainResult import FitResult
@@ -20,8 +24,9 @@ today = date.today().strftime("%d_%m_%Y")
 
 def densenet_experiment(
     run_name,
-    out_dir="../../Results/experiments/densenet",
-    data_path='../../Data',
+    out_dir=cfg.DENSENET_MODELS,
+    #data_path='../../Data',
+    data_path=cfg.DATASET_DIR,
     model_name='dias_model',
     seed=None,
     device=None,
@@ -31,7 +36,7 @@ def densenet_experiment(
     batches=100,
     epochs=100,
     early_stopping=3,
-    checkpoints='../../Models/HDF5_Models/',
+    checkpoints=cfg.DENSENET_CHECKPOINTS,
     lr=1e-3,
     weight_decay=1e-3,
     eps=1e-6,
@@ -73,8 +78,10 @@ def densenet_experiment(
 
     trainer = Trainer(model, loss_fn, optimizer, device, scheduler)
 
-    dl_train = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', batch_size=bs_train, max_chuncks=80)
-    dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=20)
+    # dl_train = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', batch_size=bs_train, max_chuncks=80)
+    # dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=20)
+    dl_train = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', batch_size=bs_train, max_chuncks=16)
+    dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=4)
     assert len(dl_valid) == len(dl_train)
 
     if plot_confusion is True:
@@ -91,8 +98,10 @@ def densenet_experiment(
 
 def resnet_experiment(
     run_name,
-    out_dir="../../Results/experiments/resnet18",
-    data_path='../../Data',
+    #out_dir="../../Results/experiments/resnet18",
+    # data_path='../../Data',
+    out_dir=cfg.RESNET_MODELS,
+    data_path= cfg.DATASET_DIR,
     model_name='dias_model',
     seed=None,
     device=None,
@@ -102,7 +111,7 @@ def resnet_experiment(
     batches=100,
     epochs=100,
     early_stopping=3,
-    checkpoints='../../Models/HDF5_Models/',
+    checkpoints=cfg.RESNET_CHECKPOINTS,
     lr=1e-3,
     weight_decay=1e-3,
     eps=1e-6,
@@ -132,6 +141,7 @@ def resnet_experiment(
         model = torch.load(model_path)
         print(f"\n*** Load checkpoint {model_path}")
     else:
+        print("create model resnet")
         model = ResNet.create_resnet_model()
     model = model.to(device)
 
@@ -144,10 +154,12 @@ def resnet_experiment(
         # Decay learning rate each epoch
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=gamma, patience=5, verbose=True)
 
-    trainer = Trainer(model, loss_fn, optimizer, device, scheduler)
+    trainer = Trainer(model, loss_fn, optimizer, device, scheduler, model_name)
 
-    dl_train = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', batch_size=bs_train, max_chuncks=80)
-    dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=20)
+    # dl_train = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', batch_size=bs_train, max_chuncks=80)
+    # dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=20)
+    dl_train = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', batch_size=bs_train, max_chuncks=16)
+    dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=4)
     assert len(dl_valid) == len(dl_train)
 
     if plot_confusion is True:
@@ -193,7 +205,7 @@ def parse_cli():
     sp_exp = sp.add_parser(
         "run-exp", help="Run experiment with a single " "configuration"
     )
-    sp_exp.set_defaults(subcmd_fn=densenet_experiment)
+    sp_exp.set_defaults(subcmd_fn=resnet_experiment)
     sp_exp.add_argument(
         "--run-name", "-n", type=str, help="Name of run and output file", required=True
     )
@@ -202,7 +214,7 @@ def parse_cli():
         "-o",
         type=str,
         help="Output folder",
-        default="../../Results/experiments/densenet",
+        default=cfg.RESNET_MODELS,
         required=False,
     )
     sp_exp.add_argument(
@@ -251,7 +263,7 @@ def parse_cli():
         "--checkpoints",
         type=str,
         help="Save model checkpoints to this file when test " "accuracy improves",
-        default="../../Models/Densenet_Models/",
+        default=cfg.RESNET_CHECKPOINTS,
     )
     sp_exp.add_argument("--lr", type=float, help="Learning rate", default=1e-2)
     sp_exp.add_argument("--weight_decay", type=float, help="Weight decay", default=1e-3)

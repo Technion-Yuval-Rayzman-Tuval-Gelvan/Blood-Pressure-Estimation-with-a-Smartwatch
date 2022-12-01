@@ -8,10 +8,9 @@ from scipy.signal import find_peaks
 from sklearn import metrics, svm
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-from SQI import SQI
+# from SQI import SQI
 import heartpy as hp
-import Config as cfg
-
+from Code.Preprocessing.Project_B import Config as cfg
 
 class Label(enum.Enum):
     good = 0
@@ -35,14 +34,15 @@ class Window:
 
 def filter_bp_bounds(y, y_pred, model_name):
     assert len(y) == len(y_pred)
-    new_y = new_y_pred = []
+    new_y = []
+    new_y_pred = []
 
     for i in range(len(y)):
         if model_name == 'dias_model':
             if y[i] > 85 or y[i] < 40 or y_pred[i] > 85 or y_pred[i] < 40:
                 continue
         if model_name == 'sys_model':
-            if y[i] > 150 or y[i] < 100 or y_pred[i] > 150 or y_pred[i] < 100:
+            if y[i] > 150 or y[i] < 85 or y_pred[i] > 150 or y_pred[i] < 85:
                 continue
         new_y.append(y[i])
         new_y_pred.append(y_pred[i])

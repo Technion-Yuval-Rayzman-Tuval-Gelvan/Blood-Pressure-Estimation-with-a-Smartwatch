@@ -10,6 +10,9 @@ import torch
 import torch.autograd as autograd
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
+
+from Code.Preprocessing.Project_B.Utils import filter_bp_bounds
+
 sys.path.append('../../Code/Training')
 import Code.Training.ResNet
 from typing import Any, Tuple, Callable, Optional, cast
@@ -26,6 +29,7 @@ class Trainer(abc.ABC):
             optimizer,
             device: Optional[torch.device] = None,
             scheduler=None,
+            model_name = 'dias_model'
     ):
         """
         Initialize the trainer.
@@ -39,6 +43,7 @@ class Trainer(abc.ABC):
         self.optimizer = optimizer
         self.loss_fn = loss_fn
         self.scheduler = scheduler
+        self.model_name = model_name
 
         if self.device:
             model.to(self.device)
@@ -159,14 +164,16 @@ class Trainer(abc.ABC):
         num_correct: int
 
         y_pred = np.squeeze(self.model(X))
-        loss = self.loss_fn(y_pred, y)
+        # new_y, new_y_pred = filter_bp_bounds(y, y_pred, self.model_name)
+        new_y, new_y_pred = y, y_pred
+        loss = self.loss_fn(new_y_pred, new_y)
         self.optimizer.zero_grad()  # Zero gradients of all parameters
         loss.backward()  # Run backprop algorithms to calculate gradients
         self.optimizer.step()  # Use gradients to update model parameters
         batch_loss = loss.item()
-        num_correct = int(torch.sum((y_pred - y) < 3))
+        num_correct = int(torch.sum((new_y_pred - new_y) < 3))
 
-        return BatchResult(batch_loss, num_correct, pred_labels=y_pred, target_labels=y)
+        return BatchResult(batch_loss, num_correct, pred_labels=new_y_pred, target_labels=new_y)
 
     def test_batch(self, batch) -> BatchResult:
         """
@@ -187,11 +194,13 @@ class Trainer(abc.ABC):
 
         with torch.no_grad():
             y_pred = np.squeeze(self.model(X))
-            loss = self.loss_fn(y_pred, y)
+            # new_y, new_y_pred = filter_bp_bounds(y, y_pred, self.model_name)
+            new_y, new_y_pred = y, y_pred
+            loss = self.loss_fn(new_y_pred, new_y)
             batch_loss = loss.item()
-            num_correct = int(torch.sum((y_pred - y) < 3))
+            num_correct = int(torch.sum((new_y_pred - new_y) < 3))
 
-        return BatchResult(batch_loss, num_correct, pred_labels=y_pred, target_labels=y)
+        return BatchResult(batch_loss, num_correct, pred_labels=new_y_pred, target_labels=new_y)
 
     @staticmethod
     def _print(message, verbose=True):
