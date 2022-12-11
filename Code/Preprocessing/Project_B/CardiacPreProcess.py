@@ -84,6 +84,7 @@ def load_files():
     file_names = ["Subject #1", "Subject #2", "Subject #3", "Subject #4", "Subject #5"]
     for name in file_names:
         data[name] = pd.read_csv(f"{cfg.CARDIAC_LOAD_DIR}/{name}.csv")
+    print(pd.DataFrame(data["Subject #1"]))
 
     return data
 
@@ -94,6 +95,8 @@ def plot_signals(data):
         window_in_sec = len(ppg_signal) / 256
         window_in_min = window_in_sec / 60
         x = np.linspace(0, window_in_min, len(ppg_signal))
+        plt.xlabel('Time [Min]')
+        plt.title('PPG Signal')
         plt.plot(x, ppg_signal)
         plt.show()
 
@@ -120,49 +123,49 @@ def main():
     data = load_files()
 
     """plot full signals"""
-    # plot_signals(data)
+    plot_signals(data)
 
     # TODO: change win dict to win list in the following methods:
     """save records as windows"""
-    win_list = preprocess_data(data)
+    #win_list = preprocess_data(data)
 
     """load windows"""
-    utils.save_list(win_list)
+    #utils.save_list(win_list)
 
     """load_windows_dictionary"""
-    win_list = utils.load_list()
-    win_dict = utils.convert_list_to_dict(win_list)
+    #win_list = utils.load_list()
+    #win_dict = utils.convert_list_to_dict(win_list)
 
     """plot windows"""
-    if cfg.PLOT:
-        utils.plot_windows(win_dict)
+    #if cfg.PLOT:
+    #    utils.plot_windows(win_dict)
 
     """histogram of labels"""
     # plot.label_histogram(win_dict)
     # plot.features_histogram(win_dict)
 
-    with pd.ExcelWriter(f'{cfg.DATA_DIR}/{cfg.TIME_DIR}/accuracy.xlsx') as excel_writer:
+    #with pd.ExcelWriter(f'{cfg.DATA_DIR}/{cfg.TIME_DIR}/accuracy.xlsx') as excel_writer:
 
-        """good/mid"""
-        print("************************* Good / Mid **************************************")
-        trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.mid,
-                                  win_dict=win_dict, excel_writer=excel_writer)
-        trainer.run()
-
-        """good/bad"""
-        print("************************* Good / Bad **************************************")
-        trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.bad,
-                                  win_dict=win_dict, excel_writer=excel_writer)
-        trainer.run()
-
-        """mid/bad"""
-        print("************************* Mid / Bad **************************************")
-        trainer = Trainer.Trainer(true_label=utils.Label.mid, false_label=utils.Label.bad,
-                                  win_dict=win_dict, excel_writer=excel_writer)
-        trainer.run()
+        # """good/mid"""
+        # print("************************* Good / Mid **************************************")
+        # trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.mid,
+        #                           win_dict=win_dict, excel_writer=excel_writer)
+        # trainer.run()
+        #
+        # """good/bad"""
+        # print("************************* Good / Bad **************************************")
+        # trainer = Trainer.Trainer(true_label=utils.Label.good, false_label=utils.Label.bad,
+        #                           win_dict=win_dict, excel_writer=excel_writer)
+        # trainer.run()
+        #
+        # """mid/bad"""
+        # print("************************* Mid / Bad **************************************")
+        # trainer = Trainer.Trainer(true_label=utils.Label.mid, false_label=utils.Label.bad,
+        #                           win_dict=win_dict, excel_writer=excel_writer)
+        # trainer.run()
 
 
 if __name__ == "__main__":
-    cfg.LOG.redirect_output()
+    # cfg.LOG.redirect_output()
     main()
-    cfg.LOG.close_log_file()
+    # cfg.LOG.close_log_file()

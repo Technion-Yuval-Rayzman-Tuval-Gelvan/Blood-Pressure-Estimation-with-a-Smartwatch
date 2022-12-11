@@ -58,9 +58,9 @@ def confusion_matrix(epoch_result, save_dir='../../Results', model_name='dias_mo
     y = epoch_result.target_labels
     new_y, new_y_pred = filter_bp_bounds(y, y_pred, model_name)
     if model_name == 'dias_model':
-        all_categories = list(range(40, 86, 1))
+        all_categories = list(range(40, 91, 1))
     else:
-        all_categories = list(range(100, 151, 1))
+        all_categories = list(range(85, 151, 1))
     confusion = torch.zeros(len(all_categories), len(all_categories))
     for k in range(len(new_y)):
         confusion[all_categories.index(int(new_y[k]))][all_categories.index(int(new_y_pred[k]))] += 1

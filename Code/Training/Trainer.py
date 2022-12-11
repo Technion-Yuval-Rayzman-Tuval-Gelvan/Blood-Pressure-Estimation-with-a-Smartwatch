@@ -164,16 +164,14 @@ class Trainer(abc.ABC):
         num_correct: int
 
         y_pred = np.squeeze(self.model(X))
-        # new_y, new_y_pred = filter_bp_bounds(y, y_pred, self.model_name)
-        new_y, new_y_pred = y, y_pred
-        loss = self.loss_fn(new_y_pred, new_y)
+        loss = self.loss_fn(y_pred, y)
         self.optimizer.zero_grad()  # Zero gradients of all parameters
         loss.backward()  # Run backprop algorithms to calculate gradients
         self.optimizer.step()  # Use gradients to update model parameters
         batch_loss = loss.item()
-        num_correct = int(torch.sum((new_y_pred - new_y) < 3))
+        num_correct = int(torch.sum((y_pred - y) < 3))
 
-        return BatchResult(batch_loss, num_correct, pred_labels=new_y_pred, target_labels=new_y)
+        return BatchResult(batch_loss, num_correct, pred_labels=y_pred, target_labels=y)
 
     def test_batch(self, batch) -> BatchResult:
         """
@@ -194,8 +192,7 @@ class Trainer(abc.ABC):
 
         with torch.no_grad():
             y_pred = np.squeeze(self.model(X))
-            # new_y, new_y_pred = filter_bp_bounds(y, y_pred, self.model_name)
-            new_y, new_y_pred = y, y_pred
+            new_y, new_y_pred = filter_bp_bounds(y, y_pred, self.model_name)
             loss = self.loss_fn(new_y_pred, new_y)
             batch_loss = loss.item()
             num_correct = int(torch.sum((new_y_pred - new_y) < 3))

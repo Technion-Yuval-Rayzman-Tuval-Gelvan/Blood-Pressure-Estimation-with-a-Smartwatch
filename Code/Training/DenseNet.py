@@ -10,7 +10,7 @@ from torchvision import datasets, models, transforms
 
 def create_densenet_model():
     model = models.densenet121(pretrained=False)
-    model.features.conv0 = nn.Conv2d(1, 64, kernel_size=7, stride=2,
+    model.features.conv0 = nn.Conv2d(3, 64, kernel_size=7, stride=2,
                                 padding=3, bias=False)
     num_features = model.classifier.in_features
     model.classifier = nn.Sequential(

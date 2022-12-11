@@ -19,7 +19,7 @@ from matplotlib import pyplot as plt
 from Code.Preprocessing.Project_B.ClassifyPlatform import ClassifyPlatform
 
 if cfg.TRAIN_MODELS is False:
-    from Code.Preprocessing.Project_B.MimicPreProcess import classify_target
+    from Code.Preprocessing.Project_B.MimicPreProcess import classify_target, save_good_records_list, save_records_list
 
 
 class DatasetCreator:
@@ -195,10 +195,10 @@ def main():
     assert cfg.WORK_MODE == cfg.Mode.save_valid_data
 
     """save list of records"""
-    # if cfg.MIN_RECORDS_PER_PATIENT > 0:
-    #     save_good_records_list()
-    # else:
-    #     save_records_list()
+    if cfg.MIN_RECORDS_PER_PATIENT > 0:
+        save_good_records_list()
+    else:
+        save_records_list()
 
     """ Save spectograms """
     dc = DatasetCreator()

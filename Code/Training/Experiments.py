@@ -24,7 +24,7 @@ today = date.today().strftime("%d_%m_%Y")
 
 def densenet_experiment(
     run_name,
-    out_dir=cfg.DENSENET_MODELS,
+    out_dir=cfg.DENSENET_RESULTS,
     #data_path='../../Data',
     data_path=cfg.DATASET_DIR,
     model_name='dias_model',
@@ -52,7 +52,7 @@ def densenet_experiment(
     if not device:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if checkpoints:
-        checkpoints = f"{checkpoints}{today}_{model_name}.pt"
+        checkpoints = f"{checkpoints}/{today}_{model_name}.pt"
     cfg = locals()
 
     fit_res = None
@@ -60,7 +60,7 @@ def densenet_experiment(
     print("run on:", device)
 
     if plot_confusion is True:
-        model_path = '../../Models/Densenet_Models/29_12_2021_dias_model'
+        model_path = None
         model = torch.load(model_path)
         print(f"\n*** Load checkpoint {model_path}")
     else:
@@ -76,7 +76,7 @@ def densenet_experiment(
         # Decay learning rate each epoch
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=gamma, patience=5, verbose=True)
 
-    trainer = Trainer(model, loss_fn, optimizer, device, scheduler)
+    trainer = Trainer(model, loss_fn, optimizer, device, scheduler, model_name=model_name)
 
     # dl_train = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Train', batch_size=bs_train, max_chuncks=80)
     # dl_valid = HDF5DataLoader.get_hdf5_dataset(data_path, model_name, 'Validation', batch_size=bs_test, max_chuncks=20)
@@ -100,7 +100,7 @@ def resnet_experiment(
     run_name,
     #out_dir="../../Results/experiments/resnet18",
     # data_path='../../Data',
-    out_dir=cfg.RESNET_MODELS,
+    out_dir=cfg.RESNET_RESULTS,
     data_path= cfg.DATASET_DIR,
     model_name='dias_model',
     seed=None,
@@ -127,7 +127,7 @@ def resnet_experiment(
     if not device:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if checkpoints:
-        checkpoints = f"{checkpoints}{today}_{model_name}"
+        checkpoints = f"{checkpoints}/{today}_{model_name}"
     cfg = locals()
 
     fit_res = None
@@ -205,7 +205,7 @@ def parse_cli():
     sp_exp = sp.add_parser(
         "run-exp", help="Run experiment with a single " "configuration"
     )
-    sp_exp.set_defaults(subcmd_fn=resnet_experiment)
+    sp_exp.set_defaults(subcmd_fn=densenet_experiment)
     sp_exp.add_argument(
         "--run-name", "-n", type=str, help="Name of run and output file", required=True
     )
@@ -214,7 +214,7 @@ def parse_cli():
         "-o",
         type=str,
         help="Output folder",
-        default=cfg.RESNET_MODELS,
+        default=cfg.DENSENET_RESULTS,
         required=False,
     )
     sp_exp.add_argument(
@@ -263,7 +263,7 @@ def parse_cli():
         "--checkpoints",
         type=str,
         help="Save model checkpoints to this file when test " "accuracy improves",
-        default=cfg.RESNET_CHECKPOINTS,
+        default=cfg.DENSENET_CHECKPOINTS,
     )
     sp_exp.add_argument("--lr", type=float, help="Learning rate", default=1e-2)
     sp_exp.add_argument("--weight_decay", type=float, help="Weight decay", default=1e-3)

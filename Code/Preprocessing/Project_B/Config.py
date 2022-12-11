@@ -16,6 +16,10 @@ class BPType(enum.Enum):
     diastolic = 0
     systolic = 1
 
+class NNType(enum.Enum):
+    resnet = 0
+    densenet = 1
+
 class Mode(enum.Enum):
     train_sqi_models = 0
     save_valid_data = 1  # After training use models to classify and save valid data to NN module
@@ -30,12 +34,15 @@ class Mode(enum.Enum):
 # ------------------------------------------------
 DATASET = Dataset.mimic
 # DATASET = Dataset.cardiac
-WORK_MODE = Mode.nn_training
+WORK_MODE = Mode.save_valid_data
 # WORK_MODE = Mode.compare_models
+NN_TYPE = NNType.densenet
+BEST_DIAS_MODEL = '09_12_2022_dias_model'
+BEST_SYS_MODEL = '12_12_2022_sys_model'
 
 PLOT = False
 MAX_PLOT_PER_LABEL = 10
-MIN_RECORDS_PER_PATIENT = 1000  # take only patients with more records
+MIN_RECORDS_PER_PATIENT = 3  # take only patients with more records
 TRAIN_RECORDS_PER_PATIENT = 3  # how many records to take from each patient for training
 NUM_PATIENTS = 5
 ALL_PATIENTS = True
@@ -47,8 +54,8 @@ WINDOWS_PER_LABEL = 8000
 TRAIN_MODELS = False
 SIGNAL_TYPE = 'ppg'  # ppg or bp
 EXP_DIR = f'{SIGNAL_TYPE}_thresh_{HIGH_THRESH}_{LOW_THRESH}'
-TRUE_PPG_SCORE = 2 # Mah + LDA + QDA + SVM ( score can be - [-4, -2, 0, 2, 4])
-TRUE_BP_SCORE = 0 # Mah + LDA + QDA + SVM ( score can be - [-4, -2, 0, 2, 4])
+TRUE_PPG_SCORE = 0 # Mah + LDA + QDA + SVM ( score can be - [-4, -2, 0, 2, 4])
+TRUE_BP_SCORE = -2 # Mah + LDA + QDA + SVM ( score can be - [-4, -2, 0, 2, 4])
 FREQUENCY_END = 12
 FREQUENCY_START = 0
 STFT_WIN_SIZE = 750
@@ -93,15 +100,25 @@ PPG_MODELS_LOAD_DIR = f'{BASE_DIR}/mimic_data/ppg_thresh_100_70/Final_results/Fi
 BP_MODELS_LOAD_DIR = f'{BASE_DIR}/mimic_data/bp_thresh_100_70/Final_results/Final_result_27_10_2022_15_21_19/models'
 DATASET_DIR = f'{BASE_DIR}/NN_Data'
 NN_MODELS = f'{BASE_DIR}/Models'
-RESNET_MODELS = f'{NN_MODELS}/ResNet_Models'
-DENSENET_MODELS = f'{NN_MODELS}/DenseNet_Models'
+RESNET_RESULTS = f'{NN_MODELS}/ResNet_Results'
+DENSENET_RESULTS = f'{NN_MODELS}/DenseNet_Results'
 RESNET_CHECKPOINTS = f'{NN_MODELS}/ResNet_Checkpoints'
 DENSENET_CHECKPOINTS = f'{NN_MODELS}/DenseNet_Checkpoints'
 # DIAS_BP_MODEL_DIR = f'{NN_MODELS}/Experiments/16_11_2022_21_26_45/Dias'
 # DIAS_BP_MODEL_DIR = f'{NN_MODELS}/{TIME_DIR}/Diad'
 # SYS_BP_MODEL_DIR = f'{NN_MODELS}/{TIME_DIR}/Sys'
-LOAD_DIAS_BP_MODEL_DIR = f'{NN_MODELS}/Experiments/16_11_2022_21_26_45/Dias'
-LOAD_SYS_BP_MODEL_DIR = f'{NN_MODELS}/Experiments/17_11_2022_17_03_28/Sys'
+
+if NN_TYPE == NNType.resnet:
+    NN_DIR = 'ResNet_Checkpoints'
+    RESULTS_DIR = RESNET_RESULTS
+else:
+    NN_DIR = 'DenseNet_Checkpoints'
+    RESULTS_DIR = DENSENET_RESULTS
+
+LOAD_DIAS_BP_MODEL_DIR = f'{NN_MODELS}/{NN_DIR}/{BEST_DIAS_MODEL}'
+LOAD_SYS_BP_MODEL_DIR = f'{NN_MODELS}/{NN_DIR}/{BEST_SYS_MODEL}'
+BEST_DIAS_RESULTS = f'{RESULTS_DIR}/{BEST_DIAS_MODEL}'
+BEST_SYS_RESULTS = f'{RESULTS_DIR}/{BEST_SYS_MODEL}'
 COMPARE_DIR_MIMIC = f'{BASE_DIR}/Results/CompareModels/mimic/{TIME}'
 COMPARE_DIR_CARDIAC = f'{BASE_DIR}/Results/CompareModels/cardiac/{TIME}'
 NN_RESULTS_DIR = f'{BASE_DIR}/Results/NNResults/{TIME}'
@@ -115,9 +132,10 @@ CLASSIFY_DIRS = [CLASSIFY_PLATFORM_DIR, CLASSIFIED_PLOTS]
 TRAINING_DIRS = [DATA_DIR, WINDOWS_DIR, PLOT_DIR, HIST_DIR, SVM_DIR, LDA_DIR, QDA_DIR, MAH_DIR, MODELS_DIR]
 SAVE_DATA_DIRS = [DATASET_DIR]
 # NN_TRAIN_DIRS = [DIAS_BP_MODEL_DIR, SYS_BP_MODEL_DIR]
-NN_TRAIN_DIRS = [RESNET_MODELS, DENSENET_MODELS, RESNET_CHECKPOINTS, DENSENET_CHECKPOINTS]
+NN_TRAIN_DIRS = [RESNET_RESULTS, DENSENET_RESULTS, RESNET_CHECKPOINTS, DENSENET_CHECKPOINTS]
 COMPARE_DIRS = [COMPARE_DIR]
-NN_RESULTS_DIRS = [NN_RESULTS_DIR]
+# NN_RESULTS_DIRS = [NN_RESULTS_DIR]
+NN_RESULTS_DIRS = [BEST_DIAS_RESULTS, BEST_SYS_RESULTS]
 
 match WORK_MODE:
     case Mode.save_valid_data:
@@ -147,7 +165,8 @@ USER_CMD = None
 LOG = Logger(f'{DATA_DIR}/{TIME_DIR}/output.log')
 CLASSIFICATION_LOG = Logger(f'{CLASSIFIED_PLOTS}/output.log')
 DATASET_LOG = Logger(f'{DATASET_DIR}/output.log')
-NN_LOG = Logger(f'{NN_RESULTS_DIR}/output.log')
+NN_LOG_DIAS = Logger(f'{BEST_DIAS_RESULTS}/output.log')
+NN_LOG_SYS = Logger(f'{BEST_SYS_RESULTS}/output.log')
 # ------------------------------------------------
 #                Init and Defines
 # ------------------------------------------------

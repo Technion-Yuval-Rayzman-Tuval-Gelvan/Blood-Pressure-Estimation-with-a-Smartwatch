@@ -59,8 +59,12 @@ def calculate_histogram(bp_list, bp_name):
 
     if cfg.WORK_MODE == cfg.Mode.project_a:
         save_dir = '../../Results/Histogram'
+    if bp_name == 'dias_model':
+        results_dir = cfg.BEST_DIAS_RESULTS
+    else:
+        results_dir = cfg.BEST_SYS_RESULTS
 
-    plt.savefig(f'{cfg.NN_RESULTS_DIR}/Histogram_{bp_name}_Blood_Pressure.png')
+    plt.savefig(f'{results_dir}/Histogram_{bp_name}_Blood_Pressure.png')
     plt.close()
     # plt.show()
 

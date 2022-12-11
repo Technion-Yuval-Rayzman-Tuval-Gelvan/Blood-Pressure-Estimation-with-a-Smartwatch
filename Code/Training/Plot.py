@@ -7,7 +7,7 @@ import sys
 import numpy as np
 import itertools
 import matplotlib.pyplot as plt
-
+from Code.Preprocessing.Project_B import Config as cfg
 from Code.Training.Experiments import load_experiment
 from Code.Training.TrainResult import FitResult
 
@@ -18,6 +18,7 @@ def plot_fit(
     log_loss=False,
     legend=None,
     train_test_overlay: bool = False,
+    window_size=1000
 ):
     """
     Plots a FitResult object.
@@ -59,8 +60,8 @@ def plot_fit(
         data = getattr(fit_res, attr)
         label = traintest if train_test_overlay else legend
         if attr == 'train_loss' or attr == 'test_loss':
-            data = np.mean(np.array(data).reshape(-1, 1000), axis=1)
-        h = ax.plot(np.arange(1, len(data)*1000 + 1, 1000), data, label=label)
+            data = np.mean(np.array(data).reshape(-1, window_size), axis=1)
+        h = ax.plot(np.arange(1, len(data)*window_size + 1, window_size), data, label=label)
         ax.set_title(attr)
 
         if lossacc == "loss":
@@ -80,7 +81,7 @@ def plot_fit(
     return fig, axes
 
 
-def plot_exp_results(filename_pattern, results_dir='../../Results/experiments/resnet18/'):
+def plot_exp_results(filename_pattern, window_size=1000, results_dir='../../Results/experiments/resnet18/'):
     fig = None
     result_files = glob.glob(os.path.join(results_dir, filename_pattern))
     result_files.sort()
@@ -88,10 +89,10 @@ def plot_exp_results(filename_pattern, results_dir='../../Results/experiments/re
         print(f'No results found for pattern {filename_pattern}.', file=sys.stderr)
         return
     for filepath in result_files:
-        m = re.match('exp_lr_(\d_)?(.*)\.json', os.path.basename(filepath))
+        m = re.match('exp_tr_(\d_)?(.*)\.json', os.path.basename(filepath))
         print(m[0], m)
         cfg, fit_res = load_experiment(filepath)
-        fig, axes = plot_fit(fit_res, fig, legend=m[0], log_loss=False)
+        fig, axes = plot_fit(fit_res, fig, legend=m[0], log_loss=False, window_size=window_size)
 
     print('common config: ', cfg)
     plt.show()
@@ -99,8 +100,11 @@ def plot_exp_results(filename_pattern, results_dir='../../Results/experiments/re
 
 def main():
     # plot_exp_results('exp1_1*.json')
-    plot_exp_results('exp_lr_64*_sys_model*.json')
-
+    # plot_exp_results('tutorial_64*_dias_model*.json', results_dir=cfg.RESNET_MODELS, window_size=1)
+    # plot_exp_results('exp_tr_64*_dias_model*.json', results_dir=cfg.RESNET_RESULTS, window_size=50)
+    # plot_exp_results('exp_tr_64*_sys_model*.json', results_dir=cfg.RESNET_RESULTS, window_size=50)
+    # plot_exp_results('exp_tr_16*09*_dias_model*.json', results_dir=cfg.DENSENET_RESULTS, window_size=50)
+    plot_exp_results('exp_tr_16*10*_sys_model*.json', results_dir=cfg.DENSENET_RESULTS, window_size=50)
 
 if __name__ == "__main__":
     main()

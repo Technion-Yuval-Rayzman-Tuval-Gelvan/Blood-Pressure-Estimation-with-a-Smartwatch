@@ -34,20 +34,28 @@ class Window:
 
 def filter_bp_bounds(y, y_pred, model_name):
     assert len(y) == len(y_pred)
-    new_y = []
-    new_y_pred = []
 
     for i in range(len(y)):
         if model_name == 'dias_model':
-            if y[i] > 85 or y[i] < 40 or y_pred[i] > 85 or y_pred[i] < 40:
-                continue
+            if y[i] > 90:
+                y[i] = 90
+            if y[i] < 40:
+                y[i] = 40
+            if y_pred[i] > 90:
+                y_pred[i] = 90
+            if y_pred[i] < 40:
+                y_pred[i] = 40
         if model_name == 'sys_model':
-            if y[i] > 150 or y[i] < 85 or y_pred[i] > 150 or y_pred[i] < 85:
-                continue
-        new_y.append(y[i])
-        new_y_pred.append(y_pred[i])
+            if y[i] > 150:
+                y[i] = 150
+            if y[i] < 85:
+                y[i] = 85
+            if y_pred[i] > 150:
+                y_pred[i] = 150
+            if y_pred[i] < 85:
+                y_pred[i] = 85
 
-    return new_y, new_y_pred
+    return y, y_pred
 
 
 def save_model(model, model_name):
