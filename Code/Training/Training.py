@@ -238,6 +238,29 @@ def plot_results(train_objective_list, val_objective_list, model_name, save_file
     plt.savefig(f'{save_file_name}/training_results.png')
 
 
+def epoch_test_score(pred_labels, target_labels, model_name):
+    total_mse = 0
+    total_mae = 0
+    num_samples = 0
+
+    y = np.array(target_labels)
+    y_hat = np.array(pred_labels)
+    y, y_hat = filter_bp_bounds(y, y_hat, model_name)
+    total_mae = (np.abs(y_hat - y)).sum()
+    total_mse = ((y_hat - y) ** 2).sum()
+    num_samples = len(y_hat)
+
+    mse_score = total_mse / num_samples
+    mae_score = total_mae / num_samples
+    std_score = np.std((y_hat - y))
+
+    print(f'The MSE score of {model_name} is: {mse_score:.3}')
+    print(f'The MAE score of {model_name} is: {mae_score:.3}')
+    print(f'The STD score of {model_name} is: {std_score:.3}')
+
+    return mae_score
+
+
 def calculate_test_score(model, test_loader, model_name):
     total_mse = 0
     total_mae = 0
@@ -256,7 +279,7 @@ def calculate_test_score(model, test_loader, model_name):
                 x, y = Variable(x), Variable(y)
 
             y_hat = np.squeeze(model(x))
-            y, y_hat = filter_bp_bounds(y, y_hat, model_name)
+            # y, y_hat = filter_bp_bounds(y, y_hat, model_name)
             y = torch.tensor(y)
             y_hat = torch.tensor(y_hat)
             error = ((y_hat - y).abs()).sum().cpu()

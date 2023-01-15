@@ -20,11 +20,11 @@ class ArrayCenterCrop(object):
         Returns:
               np.ndarray: cropped array
         """
-        _, h, w = img.shape
+        h, w = img.shape
         th, tw = self.size
-        i = int(round((h - th) / 2.))
-        j = int(round((w - tw) / 2.))
-        return img[:, i:i+th, j:j+tw]
+        i = int(round((h - th) / 2.)) + 4
+        j = int(round((w - tw) / 2.)) + 10
+        return img[i:i+th, j:j+tw]
 
 
 class ArrayRandomCrop(object):
@@ -41,7 +41,7 @@ class ArrayRandomCrop(object):
 
     @staticmethod
     def get_params(img, output_size):
-        _, h, w = img.shape
+        h, w = img.shape
         th, tw = output_size
         assert h >= th and w >= tw
         if w == tw and h == th:
@@ -54,7 +54,7 @@ class ArrayRandomCrop(object):
     def __call__(self, img):
         i, j, h, w = self.get_params(img, self.size)
 
-        return img[:, i:i+h, j:j+w]
+        return img[i:i+h, j:j+w]
 
     def __repr__(self):
         return self.__class__.__name__ + '(size={0}, padding={1})'.format(self.size, self.padding)

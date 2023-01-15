@@ -1,7 +1,8 @@
 import abc
 import os
 import sys
-import tqdm.auto
+# import tqdm.auto
+import tqdm.notebook
 import pandas as pd
 import numpy as np
 import matplotlib.dates as mdates
@@ -11,7 +12,8 @@ import torch.autograd as autograd
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
 
-from Code.Preprocessing.Project_B.Utils import filter_bp_bounds
+from Code.Preprocessing.Project_B.Utils import filter_bp_bounds, remove_bp_bounds
+from Code.Training.BPHistogram import calculate_histogram
 
 sys.path.append('../../Code/Training')
 import Code.Training.ResNet
@@ -29,7 +31,8 @@ class Trainer(abc.ABC):
             optimizer,
             device: Optional[torch.device] = None,
             scheduler=None,
-            model_name = 'dias_model'
+            model_name = 'dias_model',
+            plot_histogram = True
     ):
         """
         Initialize the trainer.
@@ -44,6 +47,7 @@ class Trainer(abc.ABC):
         self.loss_fn = loss_fn
         self.scheduler = scheduler
         self.model_name = model_name
+        self.plot_histogram = plot_histogram
 
         if self.device:
             model.to(self.device)
@@ -55,7 +59,7 @@ class Trainer(abc.ABC):
         num_epochs: int,
         checkpoints: str = None,
         early_stopping: int = None,
-        print_every: int = 1,
+        print_every: int = 100,
         **kw,
     ) -> FitResult:
         """
@@ -95,6 +99,17 @@ class Trainer(abc.ABC):
             train_acc.append(train_result.accuracy)
             test_loss.extend(test_result.losses)
             test_acc.append(test_result.accuracy)
+
+            if self.plot_histogram is True:
+                train_pred_labels = [pred.cpu().numpy() for pred in train_result.pred_labels]
+                train_target_labels = [pred.cpu().numpy() for pred in train_result.target_labels]
+                val_pred_labels = [pred.cpu().numpy() for pred in test_result.pred_labels]
+                val_target_labels = [pred.cpu().numpy() for pred in test_result.target_labels]
+                calculate_histogram(train_target_labels, self.model_name, 'target_train')
+                calculate_histogram(train_pred_labels, self.model_name, 'output_train')
+                calculate_histogram(val_target_labels, self.model_name, 'target_val')
+                calculate_histogram(val_pred_labels, self.model_name, 'output_val')
+                self.plot_histogram = False
 
             if self.scheduler is True:
                 self.scheduler.step(test_loss)
@@ -163,6 +178,7 @@ class Trainer(abc.ABC):
         batch_loss: float
         num_correct: int
 
+        # X = torch.unsqueeze(X, dim=1)
         y_pred = np.squeeze(self.model(X))
         loss = self.loss_fn(y_pred, y)
         self.optimizer.zero_grad()  # Zero gradients of all parameters
@@ -191,8 +207,11 @@ class Trainer(abc.ABC):
         num_correct: int
 
         with torch.no_grad():
+            # X = torch.unsqueeze(X, dim=1)
             y_pred = np.squeeze(self.model(X))
-            new_y, new_y_pred = filter_bp_bounds(y, y_pred, self.model_name)
+            # new_y, new_y_pred = filter_bp_bounds(y, y_pred, self.model_name)
+            # new_y, new_y_pred = remove_bp_bounds(y, y_pred, self.model_name)
+            new_y, new_y_pred = y, y_pred
             loss = self.loss_fn(new_y_pred, new_y)
             batch_loss = loss.item()
             num_correct = int(torch.sum((new_y_pred - new_y) < 3))
@@ -243,12 +262,12 @@ class Trainer(abc.ABC):
                 data = next(dl_iter)
                 batch_res = forward_fn(data)
 
-                pbar.set_description(f"{pbar_name} ({batch_res.loss:.3f})")
+                pbar.set_description(f"\r{pbar_name} ({batch_res.loss:.3f})")
                 pbar.update()
 
                 losses.append(batch_res.loss)
                 num_correct += batch_res.num_correct
-                if plot_confusion is True:
+                if plot_confusion is True and batch_res.pred_labels.dim() != 0 and batch_res.target_labels.dim() != 0:
                     pred_labels.extend(batch_res.pred_labels)
                     target_labels.extend(batch_res.target_labels)
 

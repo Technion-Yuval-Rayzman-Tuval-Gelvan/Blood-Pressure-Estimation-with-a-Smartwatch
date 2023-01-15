@@ -101,10 +101,10 @@ def plot_exp_results(filename_pattern, window_size=1000, results_dir='../../Resu
 def main():
     # plot_exp_results('exp1_1*.json')
     # plot_exp_results('tutorial_64*_dias_model*.json', results_dir=cfg.RESNET_MODELS, window_size=1)
-    # plot_exp_results('exp_tr_64*_dias_model*.json', results_dir=cfg.RESNET_RESULTS, window_size=50)
-    # plot_exp_results('exp_tr_64*_sys_model*.json', results_dir=cfg.RESNET_RESULTS, window_size=50)
-    # plot_exp_results('exp_tr_16*09*_dias_model*.json', results_dir=cfg.DENSENET_RESULTS, window_size=50)
-    plot_exp_results('exp_tr_16*10*_sys_model*.json', results_dir=cfg.DENSENET_RESULTS, window_size=50)
+    # plot_exp_results('exp_tr_64*28*_dias_model*.json', results_dir=cfg.RESNET_RESULTS, window_size=50)
+    plot_exp_results('exp_tr_64*03*_sys_model*.json', results_dir=cfg.RESNET_RESULTS, window_size=1000)
+    # plot_exp_results('exp_tr_64*28*_dias_model*.json', results_dir=cfg.DENSENET_RESULTS, window_size=50)
+    # plot_exp_results('exp_tr_64*10*_sys_model*.json', results_dir=cfg.DENSENET_RESULTS, window_size=50)
 
 if __name__ == "__main__":
     main()

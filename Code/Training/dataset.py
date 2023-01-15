@@ -2,6 +2,7 @@ import os
 import random
 import pickle
 import h5py
+from matplotlib import pyplot as plt
 from torch.utils.data import Dataset
 import numpy as np
 
@@ -14,7 +15,7 @@ class HDF5Dataset(Dataset):
     def __init__(self, file_ps,
                  transform,
                  model_name,
-                 shuffle_shards=True,
+                 shuffle_shards=False,
                  opener=default_opener,
                  seed=123,
                  max_chuncks=None):

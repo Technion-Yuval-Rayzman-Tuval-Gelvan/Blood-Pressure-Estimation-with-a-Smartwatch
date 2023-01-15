@@ -195,19 +195,19 @@ def main():
     assert cfg.WORK_MODE == cfg.Mode.save_valid_data
 
     """save list of records"""
-    if cfg.MIN_RECORDS_PER_PATIENT > 0:
-        save_good_records_list()
-    else:
-        save_records_list()
+    # if cfg.MIN_RECORDS_PER_PATIENT > 0:
+    #     save_good_records_list()
+    # else:
+    #     save_records_list()
 
     """ Save spectograms """
-    dc = DatasetCreator()
-    dc.create_dataset()
+    # dc = DatasetCreator()
+    # dc.create_dataset()
 
     """Split images to Test/Val/Test folders
        Activate only if all patients in the same directory"""
-    # data_path = cfg.DATASET_DIR
-    # arrange_folders(data_path)
+    data_path = cfg.DATASET_DIR
+    arrange_folders(data_path)
 
 
 if __name__ == "__main__":

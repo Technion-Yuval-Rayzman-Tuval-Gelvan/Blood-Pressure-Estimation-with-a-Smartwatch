@@ -4,6 +4,7 @@ import pickle
 from multiprocessing import Pool
 import numpy as np
 import matplotlib.pyplot as plt
+import torch
 from scipy.signal import find_peaks
 from sklearn import metrics, svm
 from sklearn.model_selection import train_test_split
@@ -32,28 +33,46 @@ class Window:
         self.dias_bp = dias_bp
 
 
+def remove_bp_bounds(y, y_pred, model_name):
+    y = np.array(y.cpu())
+    y_pred = np.array(y_pred.cpu())
+    if model_name == 'dias_model':
+        indices = np.where((y < 85) & (y > 45))
+    else:
+        indices = np.where((y > 95) & (y < 150))
+
+    if len(indices) == 0:
+        new_y = []
+        new_y_pred = []
+    else:
+        new_y = y[indices]
+        new_y_pred = y_pred[indices]
+
+    return torch.Tensor(new_y), torch.Tensor(new_y_pred)
+
+
 def filter_bp_bounds(y, y_pred, model_name):
     assert len(y) == len(y_pred)
 
     for i in range(len(y)):
         if model_name == 'dias_model':
-            if y[i] > 90:
-                y[i] = 90
-            if y[i] < 40:
-                y[i] = 40
-            if y_pred[i] > 90:
-                y_pred[i] = 90
-            if y_pred[i] < 40:
-                y_pred[i] = 40
+            if y[i] > 85:
+                y[i] = 85
+            if y[i] < 45:
+                y[i] = 45
+            if y_pred[i] > 85:
+                y_pred[i] = 85
+            if y_pred[i] < 45:
+                y_pred[i] = 45
         if model_name == 'sys_model':
             if y[i] > 150:
                 y[i] = 150
-            if y[i] < 85:
-                y[i] = 85
+            if y[i] < 95:
+                y[i] = 95
             if y_pred[i] > 150:
                 y_pred[i] = 150
-            if y_pred[i] < 85:
-                y_pred[i] = 85
+            if y_pred[i] < 95:
+                y_pred[i] = 95
 
     return y, y_pred
 

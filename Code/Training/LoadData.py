@@ -11,33 +11,43 @@ from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
 import shutil
 import sys
 import time
-sys.path.append(os.path.abspath(os.path.join('..', 'Training.py')))
-import Training
 
-batch_size = 64
-total_samples = 2500000
+from Code.Training import Training
+
+sys.path.append(os.path.abspath(os.path.join('..', 'Training.py')))
+# import Training
+
+batch_size = 16
+total_samples = 200000
 
 
 class CustomImageFolderDataset(Dataset):
     """Custom Image Loader dataset."""
 
-    def __init__(self, root, folder, model_name, subset_len: int, offset=0, transform=None):
+    def __init__(self, root, folder, model_name, subset_len: int, offset=0, transform=None, patients_list=None):
         """
         Args:
             root (string): Path to the images organized in a particular folder structure.
             transform: Any Pytorch transform to be applied
         """
 
-        save_path = f"{root}/Images_paths/{folder}"
+        # save_path = f"{root}/Images_paths/{folder}"
 
         """Once get images paths and save"""
         # Get all image paths from a directory
-        if not os.path.exists(save_path):
+        # if not os.path.exists(save_path):
+        #     os.makedirs(save_path)
+        #     self.image_paths = glob(f"{root}/{folder}/*/*")
+        #     Training.save_data(self.image_paths, save_path)
+        if patients_list is None:
             self.image_paths = glob(f"{root}/{folder}/*/*")
-            Training.save_data(self.image_paths, save_path)
+            # self.image_paths = Training.load_data(save_path)
+            self.image_paths = self.image_paths[offset:(offset + subset_len)]
+        else:
+            self.image_paths = []
+            for patient in patients_list:
+                self.image_paths += glob(f"{root}/{folder}/{patient}/*")
 
-        self.image_paths = Training.load_data(save_path)
-        self.image_paths = self.image_paths[offset:(offset+subset_len)]
         # Get the labels from the image paths
         if model_name == 'dias_model':
             self.labels = [x.split("_")[-1][:-4] for x in self.image_paths]
@@ -55,7 +65,7 @@ class CustomImageFolderDataset(Dataset):
 
     def __getitem__(self, idx):
         # open and send one image and label
-        assert(self.subset_len > idx >= 0)
+        # assert(self.subset_len > idx >= 0)
         img_name = self.image_paths[idx]
         label = float(self.labels[idx])
         # start = time.time()
@@ -102,7 +112,10 @@ def arrange_folders(data_path):
         print(path)
         for patient in list:
             print(patient)
-            shutil.move(os.path.join(data_path, patient), f"{path}/")
+            if len(os.listdir(os.path.join(data_path, patient))) > 1000:
+                shutil.move(os.path.join(data_path, patient), f"{path}/")
+            else:
+                print(f"Less than 1000 windows for patient {patient}")
 
 
 def split_data(data_path):
@@ -137,10 +150,12 @@ def split_data(data_path):
     return train_list, validation_list, test_list
 
 
-def get_dataset(data_path, model_name, folder, offset):
-    t = transforms.Compose([transforms.Resize((110, 110)),
-                            transforms.Grayscale(),
-                            transforms.ToTensor()])
+def get_dataset(data_path, model_name, folder, offset, patients_list=None):
+    t = transforms.Compose([transforms.Grayscale(),
+                            transforms.ToTensor(),
+                            transforms.CenterCrop(650),
+                            transforms.Resize((110, 110)),
+                            ])
     dir = f"{data_path}/{folder}"
     print(f"{folder} Dataset. Load Path: {dir}")
     max_samples = total_samples
@@ -157,11 +172,11 @@ def get_dataset(data_path, model_name, folder, offset):
 
     print(f"New samples: {max_samples}, Offset: {new_offset}")
     dataset = CustomImageFolderDataset(root=data_path, folder=folder, transform=t, model_name=model_name,
-                                       subset_len=max_samples, offset=new_offset)
+                                       subset_len=max_samples, offset=new_offset, patients_list=patients_list)
     print("Num Images in Dataset:", len(dataset))
     print("Example Image and Label:", dataset[2])
     sampler = SubsetRandomSampler(list(range(len(dataset))))
-    data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, sampler=sampler, pin_memory=True)
+    data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=1, sampler=sampler, pin_memory=True)
     for image_batch, label_batch in data_loader:
         print("Image and Label Batch Size:", image_batch.size(), label_batch.size())
         break

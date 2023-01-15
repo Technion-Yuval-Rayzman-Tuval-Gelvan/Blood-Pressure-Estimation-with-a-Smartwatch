@@ -34,11 +34,11 @@ class Mode(enum.Enum):
 # ------------------------------------------------
 DATASET = Dataset.mimic
 # DATASET = Dataset.cardiac
-WORK_MODE = Mode.save_valid_data
+WORK_MODE = Mode.nn_results
 # WORK_MODE = Mode.compare_models
-NN_TYPE = NNType.densenet
-BEST_DIAS_MODEL = '09_12_2022_dias_model'
-BEST_SYS_MODEL = '12_12_2022_sys_model'
+NN_TYPE = NNType.resnet
+BEST_DIAS_MODEL = '28_12_2022_dias_model'
+BEST_SYS_MODEL = '03_01_2023_sys_model'
 
 PLOT = False
 MAX_PLOT_PER_LABEL = 10
@@ -54,7 +54,7 @@ WINDOWS_PER_LABEL = 8000
 TRAIN_MODELS = False
 SIGNAL_TYPE = 'ppg'  # ppg or bp
 EXP_DIR = f'{SIGNAL_TYPE}_thresh_{HIGH_THRESH}_{LOW_THRESH}'
-TRUE_PPG_SCORE = 0 # Mah + LDA + QDA + SVM ( score can be - [-4, -2, 0, 2, 4])
+TRUE_PPG_SCORE = 2 # Mah + LDA + QDA + SVM ( score can be - [-4, -2, 0, 2, 4])
 TRUE_BP_SCORE = -2 # Mah + LDA + QDA + SVM ( score can be - [-4, -2, 0, 2, 4])
 FREQUENCY_END = 12
 FREQUENCY_START = 0
@@ -99,6 +99,7 @@ MODELS_DIR = f'{DATA_DIR}/{TIME_DIR}/models'
 PPG_MODELS_LOAD_DIR = f'{BASE_DIR}/mimic_data/ppg_thresh_100_70/Final_results/Final_Results_26_10/models'
 BP_MODELS_LOAD_DIR = f'{BASE_DIR}/mimic_data/bp_thresh_100_70/Final_results/Final_result_27_10_2022_15_21_19/models'
 DATASET_DIR = f'{BASE_DIR}/NN_Data'
+DATASET_DIR_UN_COMPRESSED = f'{BASE_DIR}/Data'
 NN_MODELS = f'{BASE_DIR}/Models'
 RESNET_RESULTS = f'{NN_MODELS}/ResNet_Results'
 DENSENET_RESULTS = f'{NN_MODELS}/DenseNet_Results'
@@ -165,8 +166,8 @@ USER_CMD = None
 LOG = Logger(f'{DATA_DIR}/{TIME_DIR}/output.log')
 CLASSIFICATION_LOG = Logger(f'{CLASSIFIED_PLOTS}/output.log')
 DATASET_LOG = Logger(f'{DATASET_DIR}/output.log')
-NN_LOG_DIAS = Logger(f'{BEST_DIAS_RESULTS}/output.log')
-NN_LOG_SYS = Logger(f'{BEST_SYS_RESULTS}/output.log')
+NN_LOG_DIAS = Logger(f'{BEST_DIAS_RESULTS}/output_test.log')
+NN_LOG_SYS = Logger(f'{BEST_SYS_RESULTS}/output_test.log')
 # ------------------------------------------------
 #                Init and Defines
 # ------------------------------------------------

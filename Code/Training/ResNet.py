@@ -9,9 +9,10 @@ from torchvision import datasets, models, transforms
 
 def create_resnet_model():
     model = models.resnet18(pretrained=False)
-    model.conv1.in_channels = 3
-    print("In channels 3.")
+    model.conv1.in_channels = 1
+    print("In channels 1.")
     num_features = model.fc.in_features
+    print(num_features)
     model.fc = nn.Sequential(
         nn.Linear(num_features, 1024, bias=True),
         nn.ReLU(),

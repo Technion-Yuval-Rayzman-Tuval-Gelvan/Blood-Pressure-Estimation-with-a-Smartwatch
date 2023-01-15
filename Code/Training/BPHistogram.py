@@ -48,12 +48,12 @@ def load_bp_data_loader(data_loader):
     return bp_list
 
 
-def calculate_histogram(bp_list, bp_name):
+def calculate_histogram(bp_list, bp_name, output_name):
     n, bins, patches = plt.hist(x=bp_list, bins='auto', alpha=0.7, rwidth=0.85)
     plt.grid(axis='y', alpha=0.75)
     plt.xlabel('Blood Pressure')
     plt.ylabel('# windows')
-    plt.title(f'{bp_name} Blood Pressure Histogram')
+    plt.title(f'{bp_name} {output_name} Blood Pressure Histogram')
     # dd/mm/YY H:M:S
     now = datetime.now()
 
@@ -64,7 +64,7 @@ def calculate_histogram(bp_list, bp_name):
     else:
         results_dir = cfg.BEST_SYS_RESULTS
 
-    plt.savefig(f'{results_dir}/Histogram_{bp_name}_Blood_Pressure.png')
+    plt.savefig(f'{results_dir}/Histogram_{output_name}_{bp_name}_Blood_Pressure.png')
     plt.close()
     # plt.show()
 

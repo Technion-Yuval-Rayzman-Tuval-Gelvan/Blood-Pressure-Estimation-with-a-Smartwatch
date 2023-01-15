@@ -78,11 +78,11 @@ def make_hdf5_files(out_dir, images_glob, shuffle=True, num_per_shard=1000, max_
                 shard_ps.append(shard_p)
 
             ## Yuval & Tuval edit
-            image = Image.open(image_p).convert('RGB')
+            image = Image.open(image_p).convert('L')
             dias_label = np.float16(image_p.split("_")[-1][:-4])  # remove .png
             sys_label = np.float16(image_p.split("_")[-2])
             image = np.array(image, np.uint8).transpose((2, 0, 1))
-            assert image.shape[0] == 3
+            assert image.shape[0] == 1
             index = str(count % num_per_shard)  # expected by HDF5DataLoader
             writer.create_dataset(f"image_{index}", data=image)
             writer.create_dataset(f"dias_label_{index}", data=dias_label)

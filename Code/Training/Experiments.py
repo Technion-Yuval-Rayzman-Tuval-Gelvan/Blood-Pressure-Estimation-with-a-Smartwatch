@@ -86,7 +86,7 @@ def densenet_experiment(
 
     if plot_confusion is True:
         epoch_res = trainer.test_epoch(dl_train, verbose=True, max_batches=batches, plot_confusion=True)
-        PlotConfusion.confusion_matrix(epoch_res)
+        PlotConfusion.confusion_matrix(epoch_res, save_dir=out_dir)
 
         save_experiment(run_name, out_dir, cfg, epoch_res, model_name)
     else:
@@ -164,7 +164,7 @@ def resnet_experiment(
 
     if plot_confusion is True:
         epoch_res = trainer.test_epoch(dl_train, verbose=True, max_batches=batches, plot_confusion=True)
-        PlotConfusion.confusion_matrix(epoch_res)
+        PlotConfusion.confusion_matrix(epoch_res, save_dir=out_dir)
     else:
         fit_res = trainer.fit(dl_train, dl_valid, num_epochs=epochs, print_every=1, early_stopping=early_stopping,
                               checkpoints=checkpoints, max_batches=batches, plot_confusion=False)
@@ -205,7 +205,8 @@ def parse_cli():
     sp_exp = sp.add_parser(
         "run-exp", help="Run experiment with a single " "configuration"
     )
-    sp_exp.set_defaults(subcmd_fn=densenet_experiment)
+    # sp_exp.set_defaults(subcmd_fn=densenet_experiment)
+    sp_exp.set_defaults(subcmd_fn=resnet_experiment)
     sp_exp.add_argument(
         "--run-name", "-n", type=str, help="Name of run and output file", required=True
     )
@@ -214,7 +215,8 @@ def parse_cli():
         "-o",
         type=str,
         help="Output folder",
-        default=cfg.DENSENET_RESULTS,
+        # default=cfg.DENSENET_RESULTS,
+        default=cfg.RESNET_RESULTS,
         required=False,
     )
     sp_exp.add_argument(
@@ -263,7 +265,8 @@ def parse_cli():
         "--checkpoints",
         type=str,
         help="Save model checkpoints to this file when test " "accuracy improves",
-        default=cfg.DENSENET_CHECKPOINTS,
+        # default=cfg.DENSENET_CHECKPOINTS,
+        default=cfg.RESNET_CHECKPOINTS,
     )
     sp_exp.add_argument("--lr", type=float, help="Learning rate", default=1e-2)
     sp_exp.add_argument("--weight_decay", type=float, help="Weight decay", default=1e-3)

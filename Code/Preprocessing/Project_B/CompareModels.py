@@ -99,6 +99,7 @@ def compare_accuracy_to_cardiac(win_list):
 
 def calculate_histogram(win_hist, name):
 
+    total_windows = 0
     hist_list = {}
     for key in win_hist.keys():
         win_list = win_hist[key]
@@ -106,7 +107,7 @@ def calculate_histogram(win_hist, name):
         hist_key = f"{key_list[0][0]}, {key_list[1][0]}, {key_list[2][0]}"
         hist_list[hist_key] = len(win_list)
 
-        print(f"{hist_key}: {len(win_list)}")
+        total_windows += len(win_list)
 
         for compare_win in win_list:
             if cfg.PLOT:
@@ -117,6 +118,9 @@ def calculate_histogram(win_hist, name):
 
                 name_list = key.split(", ")
                 utils.plot_win(signal, f'cardiac_{name_list[0]}_heartpy_{name_list[1]}_ours_{name_list[2]}/{compare_win.win.win_name}')
+
+    for key, value in hist_list.items():
+        print(f"{key}: {value}, {value*100/total_windows}%")
 
     plt.bar(x=list(hist_list.keys()), height=list(hist_list.values()))
     plt.grid(axis='y')

@@ -6,6 +6,7 @@ import Utils as utils
 import Config as cfg
 import Plot as plot
 import Trainer
+from Code.Preprocessing.Project_B.SQI import SQI
 
 
 def classify_target(signal_flags):
@@ -58,10 +59,10 @@ def preprocess_data(data):
             if win_ppg_target is None or win_bp_target is None:
                 return
 
-            win_ppg_sqi = utils.SQI()
+            win_ppg_sqi = SQI()
             win_ppg_sqi.calculate_sqi(win_ppg_signal)
             win_ppg_sqi_list = win_ppg_sqi.get_ski_list()
-            win_bp_sqi = utils.SQI()
+            win_bp_sqi = SQI()
             win_bp_sqi.calculate_sqi(win_bp_signal)
             win_bp_sqi_list = win_bp_sqi.get_ski_list()
 
